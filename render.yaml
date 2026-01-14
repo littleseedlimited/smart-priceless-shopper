@@ -29,12 +29,6 @@ services:
       - key: TELEGRAM_BOT_TOKEN
         sync: false
       - key: API_BASE
-        fromService:
-          type: web
-          name: smart-priceless-shopper
-          property: url
+        sync: false
       - key: WEB_APP_URL
-        fromService:
-          type: web
-          name: smart-priceless-shopper
-          property: url
+        sync: false
