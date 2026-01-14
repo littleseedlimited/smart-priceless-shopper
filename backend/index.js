@@ -1,0 +1,388 @@
+const express = require('express');
+const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
+require('dotenv').config();
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+const DB_FILE = process.env.DB_PATH || path.join(__dirname, 'db.json');
+
+app.use(cors());
+app.use(express.json());
+// Serve dist for React App
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
+// Serve specific static files needed by bot
+app.use('/scanner.html', express.static(path.join(__dirname, '../frontend/scanner.html')));
+app.use('/test_barcodes.html', express.static(path.join(__dirname, '../frontend/test_barcodes.html')));
+
+// --- Persistent Database Initialization ---
+const initialDb = {
+  outlets: [
+    { id: 'imo-central', name: 'Priceless Imo Central', location: 'Owerri' },
+    { id: 'imo-north', name: 'Priceless Imo North', location: 'Okigwe' },
+    { id: 'lagos-lekki', name: 'Priceless Lagos Lekki', location: 'Lagos' }
+  ],
+  products: [
+    {
+      barcode: '123456',
+      name: 'Nestlé Milo 500g',
+      price: 2500,
+      category: 'Beverage',
+      image: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&q=80&w=200',
+      description: 'The energy food drink of future champions.'
+    },
+    {
+      barcode: '234567',
+      name: 'Peak Full Cream Milk',
+      price: 1800,
+      category: 'Dairy',
+      image: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&q=80&w=200',
+      description: 'Rich and creamy milk for your morning tea.'
+    }
+  ],
+  users: [],
+  transactions: [],
+  staff: [
+    { username: 'origichidiah', role: 'SUPER_ADMIN', name: 'Original Chidiah' }
+  ],
+  roles: ['SUPER_ADMIN', 'INVENTORY_MANAGER', 'BILLING_STAFF'],
+  settings: {
+    storeName: 'Smart Priceless Shopper',
+    location: 'Lagos, Nigeria',
+    operatingHours: '8:00 AM - 9:00 PM',
+    welcomeMessage: 'Welcome to Smart Priceless Shopper! Ready to shop? 🛍️',
+    contactSupport: '@priceless_support'
+  }
+};
+
+let db = initialDb;
+
+// Load DB from file if exists
+if (fs.existsSync(DB_FILE)) {
+  try {
+    const data = fs.readFileSync(DB_FILE, 'utf8');
+    db = JSON.parse(data);
+    console.log(`[Database] Loaded ${db.products.length} products from ${DB_FILE}`);
+    // Ensure Super Admin is always there
+    if (!db.staff.find(s => s.username === 'origichidiah')) {
+      db.staff.push({ username: 'origichidiah', role: 'SUPER_ADMIN', name: 'Original Chidiah' });
+    }
+  } catch (err) {
+    console.error(`[Database] Error loading DB file: ${err.message}`);
+    console.log("[Database] Falling back to initial memory DB");
+  }
+}
+
+const saveDb = () => {
+  try {
+    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
+    console.log(`[Database] Saved ${db.products.length} products to ${DB_FILE}`);
+  } catch (err) {
+    console.error(`[Database] Error saving DB: ${err.message}`);
+  }
+};
+
+// --- Middleware ---
+
+const checkRole = (allowedRoles) => (req, res, next) => {
+  const adminId = req.headers['x-admin-username']; // For dev, we use username header
+  const staffMember = db.staff.find(s => s.username === adminId);
+
+  if (staffMember && allowedRoles.includes(staffMember.role)) {
+    req.admin = staffMember;
+    next();
+  } else {
+    res.status(403).json({ error: 'Access Denied: Insufficient Permissions' });
+  }
+};
+
+// --- Routes ---
+
+// Health Check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK', message: 'Smart Priceless Shopper API is running' });
+});
+
+// --- Product Endpoints ---
+
+app.get('/api/products/all', (req, res) => {
+  res.json(db.products);
+});
+
+app.get('/api/products/:barcode', (req, res) => {
+  const searchBarcode = String(req.params.barcode).trim();
+  console.log(`[Lookup] Searching for barcode: "${searchBarcode}"`);
+  const product = db.products.find(p => String(p.barcode).trim() === searchBarcode);
+  if (product) {
+    res.json(product);
+  } else {
+    console.log(`[Lookup] Product NOT FOUND: "${searchBarcode}"`);
+    res.status(404).json({ error: 'Product not found' });
+  }
+});
+
+// Admin CRUD - Products
+app.post('/api/admin/products', checkRole(['SUPER_ADMIN', 'INVENTORY_MANAGER']), (req, res) => {
+  const { barcode, name, price, category, description } = req.body;
+  const bcode = String(barcode).trim();
+  const existing = db.products.find(p => String(p.barcode).trim() === bcode);
+  if (existing) return res.status(400).json({ error: 'Barcode already exists' });
+
+  const product = {
+    barcode: bcode,
+    name,
+    price: parseInt(price) || 0,
+    category,
+    description,
+    createdAt: new Date()
+  };
+  db.products.push(product);
+  saveDb();
+  res.status(201).json(product);
+});
+
+app.post('/api/admin/products/bulk', checkRole(['SUPER_ADMIN', 'INVENTORY_MANAGER']), (req, res) => {
+  const products = req.body;
+  if (!Array.isArray(products)) return res.status(400).json({ error: 'Expected array of products' });
+
+  let added = 0;
+  let updated = 0;
+
+  products.forEach(p => {
+    if (!p.barcode || !p.name || !p.price) return;
+    const barcode = String(p.barcode).trim();
+    const index = db.products.findIndex(existing => String(existing.barcode).trim() === barcode);
+    if (index !== -1) {
+      db.products[index] = { ...db.products[index], ...p, barcode };
+      updated++;
+    } else {
+      db.products.push({ ...p, barcode });
+      added++;
+    }
+  });
+
+  saveDb();
+  res.json({ message: 'Bulk upload successful', added, updated });
+});
+
+app.put('/api/admin/products/:barcode', checkRole(['SUPER_ADMIN', 'INVENTORY_MANAGER']), (req, res) => {
+  const oldBarcode = String(req.params.barcode).trim();
+  const index = db.products.findIndex(p => String(p.barcode).trim() === oldBarcode);
+
+  if (index !== -1) {
+    const { barcode, name, price, category, description } = req.body;
+    const bcode = String(barcode || oldBarcode).trim();
+
+    db.products[index] = {
+      ...db.products[index],
+      ...req.body,
+      barcode: bcode,
+      updatedAt: new Date()
+    };
+    saveDb();
+    res.json(db.products[index]);
+  } else {
+    res.status(404).json({ error: 'Product not found' });
+  }
+});
+
+app.delete('/api/admin/products/:barcode', checkRole(['SUPER_ADMIN']), (req, res) => {
+  const delBarcode = String(req.params.barcode).trim();
+  const index = db.products.findIndex(p => String(p.barcode).trim() === delBarcode);
+  if (index !== -1) {
+    const deleted = db.products.splice(index, 1);
+    saveDb();
+    res.json(deleted);
+  } else {
+    res.status(404).json({ error: 'Product not found' });
+  }
+});
+
+// --- Staff Endpoints (Admin Only) ---
+
+app.get('/api/admin/staff', checkRole(['SUPER_ADMIN']), (req, res) => {
+  res.json(db.staff);
+});
+
+app.post('/api/admin/staff', checkRole(['SUPER_ADMIN']), (req, res) => {
+  const newStaff = req.body;
+  if (db.staff.find(s => s.username === newStaff.username)) {
+    return res.status(400).json({ error: 'Staff already exists' });
+  }
+  db.staff.push(newStaff);
+  saveDb();
+  res.status(201).json(newStaff);
+});
+
+app.delete('/api/admin/staff/:username', checkRole(['SUPER_ADMIN']), (req, res) => {
+  if (req.params.username === 'origichidiah') return res.status(403).json({ error: "Cannot delete the Super Admin" });
+  const index = db.staff.findIndex(s => s.username === req.params.username);
+  if (index !== -1) {
+    db.staff.splice(index, 1);
+    saveDb();
+    res.json({ message: 'Staff removed' });
+  } else res.status(404).json({ error: 'Staff not found' });
+});
+
+// --- analytics ---
+
+app.get('/api/admin/analytics', checkRole(['SUPER_ADMIN', 'BILLING_STAFF']), (req, res) => {
+  const totalSales = db.transactions.reduce((sum, t) => sum + t.totalAmount, 0);
+  res.json({
+    totalSales,
+    totalOrders: db.transactions.length,
+    totalProducts: db.products.length,
+    totalUsers: db.users.length,
+    recentTransactions: db.transactions.slice(-10).reverse()
+  });
+});
+
+// --- User Identity Endpoints ---
+
+app.get('/api/users/check/:userId', (req, res) => {
+  const user = db.users.find(u => u.userId == req.params.userId);
+  if (user) {
+    res.json({ registered: true, name: user.name, loggedIn: !!user.sessionActive });
+  } else {
+    res.json({ registered: false });
+  }
+});
+
+// --- Settings Endpoints ---
+app.get('/api/admin/settings', checkRole(['SUPER_ADMIN']), (req, res) => {
+  res.json(db.settings || initialDb.settings);
+});
+
+app.post('/api/admin/settings', checkRole(['SUPER_ADMIN']), (req, res) => {
+  db.settings = { ...db.settings, ...req.body };
+  saveDb();
+  res.json(db.settings);
+});
+
+app.post('/api/users/register', (req, res) => {
+  const { userId, name, email, phone } = req.body;
+  const existing = db.users.find(u => u.userId == userId);
+  if (existing) return res.status(400).json({ error: 'User already registered' });
+
+  const loginCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const newUser = {
+    userId,
+    name,
+    email,
+    phone,
+    loginCode,
+    sessionActive: true, // Login instantly after signup
+    registeredAt: new Date()
+  };
+
+  db.users.push(newUser);
+  saveDb();
+  res.status(201).json({ message: 'Registration successful', loginCode });
+});
+
+app.post('/api/users/login', (req, res) => {
+  const { userId, code } = req.body;
+  const userIndex = db.users.findIndex(u => u.userId == userId);
+
+  if (userIndex !== -1 && db.users[userIndex].loginCode === code) {
+    db.users[userIndex].sessionActive = true;
+    saveDb();
+    res.json({ message: 'Login successful', name: db.users[userIndex].name });
+  } else {
+    res.status(401).json({ error: 'Invalid security code' });
+  }
+});
+
+app.post('/api/users/logout', (req, res) => {
+  const { userId } = req.body;
+  const userIndex = db.users.findIndex(u => u.userId == userId);
+  if (userIndex !== -1) {
+    db.users[userIndex].sessionActive = false;
+    saveDb();
+  }
+  res.json({ message: 'Logged out' });
+});
+
+// --- Cart Endpoints ---
+// (Ensure carts exist in initial db structure if not already there, but we can initialize them on the fly)
+if (!db.carts) db.carts = {};
+
+app.get('/api/cart/:userId', (req, res) => {
+  res.json(db.carts[req.params.userId] || []);
+});
+
+app.post('/api/cart/add', (req, res) => {
+  const { userId, barcode, quantity } = req.body;
+  console.log(`[Cart] Add request - userId: ${userId}, barcode: ${barcode}, qty: ${quantity}`);
+
+  if (!userId) {
+    console.log('[Cart] ERROR: Missing userId');
+    return res.status(400).json({ error: 'Missing userId' });
+  }
+
+  const bcode = String(barcode).trim();
+  const product = db.products.find(p => String(p.barcode).trim() === bcode);
+  if (!product) {
+    console.log(`[Cart] ERROR: Product not found for barcode: ${bcode}`);
+    return res.status(404).json({ error: 'Product not found' });
+  }
+
+  const qty = parseInt(quantity) || 1;
+
+  if (!db.carts[userId]) db.carts[userId] = [];
+
+  // Check if product already in cart
+  const existingIndex = db.carts[userId].findIndex(item => String(item.barcode).trim() === bcode);
+
+  if (existingIndex !== -1) {
+    db.carts[userId][existingIndex].quantity = (db.carts[userId][existingIndex].quantity || 1) + qty;
+    console.log(`[Cart] Updated quantity for ${product.name} in cart for user ${userId}`);
+  } else {
+    db.carts[userId].push({ ...product, barcode: bcode, quantity: qty, scanTime: new Date() });
+    console.log(`[Cart] Added ${product.name} to cart for user ${userId}`);
+  }
+
+  saveDb();
+  console.log(`[Cart] SUCCESS - Cart now has ${db.carts[userId].length} items for user ${userId}`);
+  res.json({ message: 'Added to cart', product, cartCount: db.carts[userId].length });
+});
+
+app.post('/api/cart/clear', (req, res) => {
+  const { userId } = req.body;
+  db.carts[userId] = [];
+  saveDb();
+  res.json({ message: 'Cart cleared' });
+});
+
+// --- Checkout & Transactions ---
+
+app.post('/api/checkout', (req, res) => {
+  const { userId, outletId, items, totalAmount, paymentMethod } = req.body;
+  const transactionId = `TXN-${Date.now()}`;
+  const newTransaction = {
+    id: transactionId,
+    userId,
+    outletId,
+    items,
+    totalAmount,
+    status: 'paid',
+    timestamp: new Date()
+  };
+  db.transactions.push(newTransaction);
+  saveDb();
+  res.status(201).json({ transactionId, exitQrCode: transactionId });
+});
+
+app.get('/api/transactions/:userId', (req, res) => {
+  res.json(db.transactions.filter(t => t.userId == req.params.userId));
+});
+
+// --- Catch-all to serve React App for client-side routing ---
+app.use((req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+});
+
+app.listen(PORT, () => {
+  console.log(`Priceless Backend (Admin Core) running on port ${PORT}`);
+});

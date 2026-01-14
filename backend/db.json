@@ -1,0 +1,120 @@
+{
+  "outlets": [
+    {
+      "id": "imo-central",
+      "name": "Priceless Imo Central",
+      "location": "Owerri"
+    },
+    {
+      "id": "imo-north",
+      "name": "Priceless Imo North",
+      "location": "Okigwe"
+    },
+    {
+      "id": "lagos-lekki",
+      "name": "Priceless Lagos Lekki",
+      "location": "Lagos"
+    }
+  ],
+  "products": [
+    {
+      "barcode": "123456",
+      "name": "Nestlé Milo 500g",
+      "price": 2500,
+      "category": "Beverage",
+      "image": "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&q=80&w=200",
+      "description": "The energy food drink of future champions."
+    },
+    {
+      "barcode": "234567",
+      "name": "Peak Full Cream Milk",
+      "price": 1800,
+      "category": "Dairy",
+      "image": "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&q=80&w=200",
+      "description": "Rich and creamy milk for your morning tea."
+    },
+    {
+      "barcode": "615600098593",
+      "name": "Lasena 1Litre",
+      "price": 250,
+      "category": "Water",
+      "description": ""
+    },
+    {
+      "barcode": "6151100052476",
+      "name": "Hollandia Evaporated milk 190g",
+      "price": 750,
+      "category": "Dairy",
+      "description": "",
+      "createdAt": "2026-01-14T17:27:34.467Z"
+    },
+    {
+      "barcode": "440850696938",
+      "name": "Fanta",
+      "price": 500,
+      "category": "Beverages",
+      "description": "",
+      "createdAt": "2026-01-14T19:00:03.682Z"
+    }
+  ],
+  "users": [
+    {
+      "userId": 1241907317,
+      "name": "Chidi Agbaraji",
+      "email": "chidiagbaraji@yahoo.com",
+      "phone": "+2348082823374",
+      "loginCode": "298220",
+      "sessionActive": true,
+      "registeredAt": "2026-01-13T21:09:24.678Z"
+    }
+  ],
+  "transactions": [],
+  "staff": [
+    {
+      "username": "origichidiah",
+      "role": "SUPER_ADMIN",
+      "name": "Original Chidiah"
+    },
+    {
+      "username": "@kingsa",
+      "name": "Kingsley Agbaraji",
+      "role": "INVENTORY_MANAGER"
+    }
+  ],
+  "roles": [
+    "SUPER_ADMIN",
+    "INVENTORY_MANAGER",
+    "BILLING_STAFF"
+  ],
+  "carts": {
+    "1241907317": [
+      {
+        "barcode": "123456",
+        "name": "Nestlé Milo 500g",
+        "price": 2500,
+        "category": "Beverage",
+        "image": "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&q=80&w=200",
+        "description": "The energy food drink of future champions.",
+        "quantity": 1,
+        "scanTime": "2026-01-14T17:51:26.164Z"
+      },
+      {
+        "barcode": "6151100052476",
+        "name": "Hollandia Evaporated milk 190g",
+        "price": 750,
+        "category": "Dairy",
+        "description": "",
+        "createdAt": "2026-01-14T17:27:34.467Z",
+        "quantity": 3,
+        "scanTime": "2026-01-14T18:15:13.258Z"
+      }
+    ]
+  },
+  "settings": {
+    "storeName": "Smart Priceless Shopper",
+    "location": "Lagos, Nigeria",
+    "operatingHours": "8:00 AM - 9:00 PM",
+    "welcomeMessage": "Welcome to Smart Priceless Shopper! Ready to shop? 🛍️",
+    "contactSupport": "@priceless_support"
+  }
+}

@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: smart-priceless-shopper
+    env: node
+    buildCommand: npm run install:all && npm run build:frontend
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: WEB_APP_URL
+        sync: false
+      - key: NODE_ENV
+        value: production
+      - key: DB_PATH
+        value: /opt/render/project/src/backend/data/db.json
+    disk:
+      name: db-disk
+      mountPath: /opt/render/project/src/backend/data
+      sizeGB: 1
+
+  - type: worker
+    name: shopper-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot.py
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: API_BASE
+        fromService:
+          type: web
+          name: smart-priceless-shopper
+          property: url
+      - key: WEB_APP_URL
+        fromService:
+          type: web
+          name: smart-priceless-shopper
+          property: url

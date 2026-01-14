@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Priceless Test Sheet</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            padding: 40px;
+            background: #f4f7f6;
+        }
+
+        .sheet {
+            background: white;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #E31E24;
+        }
+
+        .item {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px dashed #ccc;
+            border-radius: 10px;
+        }
+
+        .name {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .price {
+            color: #1D5B9B;
+            font-weight: bold;
+        }
+
+        svg {
+            margin-top: 10px;
+            max-width: 100%;
+        }
+
+        .tip {
+            font-size: 12px;
+            color: #666;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sheet">
+        <h1>Priceless AI Test Sheet</h1>
+        <p>Scan these from your screen using the bot scanner</p>
+
+        <div class="item">
+            <div class="name">Nestlé Milo 500g</div>
+            <div class="price">₦2,500</div>
+            <svg id="barcode1"></svg>
+        </div>
+
+        <div class="item">
+            <div class="name">Peak Full Cream Milk</div>
+            <div class="price">₦1,800</div>
+            <svg id="barcode2"></svg>
+        </div>
+
+        <div class="item">
+            <div class="name">Test QR Code (Cart View)</div>
+            <div class="price">Multi-item Test</div>
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=123456" alt="QR">
+        </div>
+
+        <p class="tip">These 1D barcodes follow international EAN/UPC standards.</p>
+    </div>
+
+    <script>
+        JsBarcode("#barcode1", "123456", { format: "CODE128", displayValue: true, lineColor: "#000" });
+        JsBarcode("#barcode2", "234567", { format: "CODE128", displayValue: true, lineColor: "#000" });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,11 @@
+{
+    "name": "smart-priceless-shopper",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+        "build:frontend": "cd frontend && npm run build",
+        "start": "cd backend && node index.js",
+        "deploy": "npm run install:all && npm run build:frontend && npm start"
+    }
+}

@@ -1,0 +1,16 @@
+[
+  {
+    "barcode": "123456",
+    "name": "Nestlé Milo 500g",
+    "price": 2500,
+    "category": "Beverage",
+    "description": "The energy food drink of future champions."
+  },
+  {
+    "barcode": "234567",
+    "name": "Peak Full Cream Milk",
+    "price": 1800,
+    "category": "Dairy",
+    "description": "Rich and creamy milk for your morning tea."
+  }
+]

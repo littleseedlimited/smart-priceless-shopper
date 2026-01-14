@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Priceless Multi-Scanner</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap');
+
+        :root {
+            --brand-red: #E31E24;
+            --brand-blue: #1D5B9B;
+            --brand-orange: #F58220;
+        }
+
+        body {
+            background: #000;
+            color: white;
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        #reader {
+            width: 100%;
+            height: 100%;
+            background: #000;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .header {
+            padding: 30px 20px;
+            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), transparent);
+            text-align: center;
+        }
+
+        .brand-name {
+            color: var(--brand-red);
+            letter-spacing: 2px;
+            font-weight: 900;
+            font-size: 24px;
+            text-transform: uppercase;
+        }
+
+        .instruction {
+            color: #ccc;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .scanner-viewfinder {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .frame {
+            width: 280px;
+            height: 180px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            position: relative;
+            box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.6);
+        }
+
+        .laser {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: var(--brand-red);
+            box-shadow: 0 0 15px var(--brand-red);
+            top: 0;
+            animation: scan 2s infinite linear;
+        }
+
+        @keyframes scan {
+            0% {
+                top: 0%;
+            }
+
+            50% {
+                top: 100%;
+            }
+
+            100% {
+                top: 0%;
+            }
+        }
+
+        .corner {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-color: var(--brand-orange);
+            border-style: solid;
+            border-width: 4px;
+        }
+
+        .top-left {
+            top: -2px;
+            left: -2px;
+            border-right: 0;
+            border-bottom: 0;
+            border-top-left-radius: 8px;
+        }
+
+        .top-right {
+            top: -2px;
+            right: -2px;
+            border-left: 0;
+            border-bottom: 0;
+            border-top-right-radius: 8px;
+        }
+
+        .bottom-left {
+            bottom: -2px;
+            left: -2px;
+            border-right: 0;
+            border-top: 0;
+            border-bottom-left-radius: 8px;
+        }
+
+        .bottom-right {
+            bottom: -2px;
+            right: -2px;
+            border-left: 0;
+            border-top: 0;
+            border-bottom-right-radius: 8px;
+        }
+
+        .feedback-toast {
+            position: absolute;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            color: #000;
+            padding: 12px 20px;
+            border-radius: 15px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            width: 80%;
+            max-width: 300px;
+            animation: slideUp 0.3s ease-out;
+            pointer-events: auto;
+        }
+
+        @keyframes slideUp {
+            from {
+                bottom: 80px;
+                opacity: 0;
+            }
+
+            to {
+                bottom: 120px;
+                opacity: 1;
+            }
+        }
+
+        .toast-title {
+            font-weight: 900;
+            font-size: 16px;
+            color: var(--brand-blue);
+        }
+
+        .toast-price {
+            font-weight: 700;
+            color: var(--brand-red);
+            margin-top: 4px;
+        }
+
+        .footer {
+            padding: 20px;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+            pointer-events: auto;
+        }
+
+        .status-text {
+            color: var(--brand-orange);
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .done-btn {
+            background: linear-gradient(135deg, var(--brand-red), var(--brand-orange));
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-weight: 900;
+            font-size: 16px;
+            box-shadow: 0 4px 15px rgba(227, 30, 36, 0.4);
+            cursor: pointer;
+            width: 100%;
+            max-width: 250px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="reader"></div>
+    <div class="overlay">
+        <div class="header">
+            <div class="brand-name">Priceless Shopper</div>
+            <div class="instruction">Keep scanning to add more items</div>
+        </div>
+        <div class="scanner-viewfinder">
+            <div class="frame">
+                <div class="laser"></div>
+                <div class="corner top-left"></div>
+                <div class="corner top-right"></div>
+                <div class="corner bottom-left"></div>
+                <div class="corner bottom-right"></div>
+            </div>
+
+            <div id="toast" class="feedback-toast">
+                <div class="toast-title" id="p-name">Product Name</div>
+                <div class="toast-price" id="p-price">₦0.00</div>
+
+                <div style="margin-top: 15px; display: flex; align-items: center; gap: 15px;">
+                    <button onclick="changeQty(-1)"
+                        style="width: 36px; height: 36px; border-radius: 50%; border: none; background: #eee; font-weight: 800; font-size: 20px;">-</button>
+                    <span id="p-qty"
+                        style="font-size: 20px; font-weight: 800; min-width: 30px; text-align: center;">1</span>
+                    <button onclick="changeQty(1)"
+                        style="width: 36px; height: 36px; border-radius: 50%; border: none; background: #eee; font-weight: 800; font-size: 20px;">+</button>
+                </div>
+
+                <div style="display: flex; gap: 10px; width: 100%; margin-top: 15px;">
+                    <button onclick="confirmAdd()"
+                        style="flex: 2; padding: 10px; border-radius: 10px; border: none; background: var(--brand-red); color: white; font-weight: 800;">CONFIRM</button>
+                    <button onclick="cancelAdd()"
+                        style="flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #ccc; background: white; font-weight: 700;">X</button>
+                </div>
+            </div>
+        </div>
+        <div class="footer">
+            <div id="status" class="status-text">INITIALIZING AI VISION...</div>
+            <button class="done-btn" onclick="finishShopping()">DONE SHOPPING</button>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        // Try multiple methods to get userId
+        let userId = null;
+
+        // Method 1: From initDataUnsafe (standard way)
+        if (tg.initDataUnsafe?.user?.id) {
+            userId = tg.initDataUnsafe.user.id;
+            console.log('[Scanner] Got userId from initDataUnsafe:', userId);
+        }
+
+        // Method 2: From URL parameter (fallback)
+        if (!userId) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlUserId = urlParams.get('userId') || urlParams.get('user_id');
+            if (urlUserId) {
+                userId = urlUserId;
+                console.log('[Scanner] Got userId from URL:', userId);
+            }
+        }
+
+        // Method 3: Parse initData string manually
+        if (!userId && tg.initData) {
+            try {
+                const params = new URLSearchParams(tg.initData);
+                const userJson = params.get('user');
+                if (userJson) {
+                    const user = JSON.parse(decodeURIComponent(userJson));
+                    userId = user.id;
+                    console.log('[Scanner] Got userId from parsed initData:', userId);
+                }
+            } catch (e) {
+                console.error('[Scanner] Failed to parse initData:', e);
+            }
+        }
+
+        // Debug: Show userId status on screen briefly
+        console.log('[Scanner] Final userId:', userId);
+        console.log('[Scanner] Telegram initData:', tg.initData);
+        console.log('[Scanner] Telegram initDataUnsafe:', JSON.stringify(tg.initDataUnsafe));
+
+        let isProcessing = false;
+        let currentScan = null;
+        let currentQty = 1;
+        let scannerPaused = false;
+
+        function showToast(product) {
+            currentScan = product;
+            currentQty = 1;
+            document.getElementById('p-qty').innerText = "1";
+            document.getElementById('p-name').innerText = product.name;
+            document.getElementById('p-price').innerText = '₦' + product.price.toLocaleString();
+
+            const toast = document.getElementById('toast');
+            toast.style.display = 'flex';
+
+            // Beep sound
+            try { new Audio('https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3').play(); } catch (e) { }
+
+            document.getElementById('status').innerText = "SPECIFY QUANTITY";
+            html5QrCode.pause();
+            scannerPaused = true;
+        }
+
+        function changeQty(delta) {
+            currentQty = Math.max(1, currentQty + delta);
+            document.getElementById('p-qty').innerText = currentQty;
+        }
+
+        function confirmAdd() {
+            if (!currentScan) return;
+
+            // Validate userId
+            if (!userId) {
+                console.error('No userId available');
+                document.getElementById('status').innerHTML = '<span style="color: red">ERROR: Not logged in</span>';
+                setTimeout(resumeScanner, 2000);
+                return;
+            }
+
+            document.getElementById('status').innerText = "ADDING TO CART...";
+
+            const payload = {
+                userId: userId,
+                barcode: currentScan.barcode,
+                quantity: currentQty
+            };
+
+            console.log('[Scanner] Adding to cart:', payload);
+
+            fetch('/api/cart/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+                .then(res => {
+                    console.log('[Scanner] Response status:', res.status);
+                    if (!res.ok) {
+                        return res.json().then(err => Promise.reject(err));
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    console.log('[Scanner] Success:', data);
+                    document.getElementById('toast').style.display = 'none';
+                    document.getElementById('status').innerHTML = `<span style="color: var(--brand-green)">✨ ${currentScan.name} ADDED x${currentQty}</span>`;
+
+                    // Small delay to let user see the checkmark
+                    setTimeout(resumeScanner, 1500);
+                })
+                .catch(err => {
+                    console.error('[Scanner] Error:', err);
+                    document.getElementById('toast').style.display = 'none';
+                    document.getElementById('status').innerHTML = `<span style="color: red">ERROR: ${err.error || 'Failed to add'}</span>`;
+                    setTimeout(resumeScanner, 2000);
+                });
+        }
+
+        function cancelAdd() {
+            document.getElementById('toast').style.display = 'none';
+            document.getElementById('status').innerText = "CANCELLED - READY";
+            resumeScanner();
+        }
+
+        function resumeScanner() {
+            setTimeout(() => {
+                if (scannerPaused) {
+                    html5QrCode.resume();
+                    scannerPaused = false;
+                }
+                isProcessing = false;
+                currentScan = null;
+            }, 1000);
+        }
+
+        function onScanSuccess(decodedText) {
+            if (isProcessing) return;
+            isProcessing = true;
+
+            document.getElementById('status').innerText = "SEARCHING DATABASE...";
+
+            fetch(`/api/products/${decodedText}`)
+                .then(res => {
+                    if (res.status === 404) throw new Error("NOT_FOUND");
+                    return res.json();
+                })
+                .then(product => {
+                    showToast(product);
+                })
+                .catch(err => {
+                    if (err.message === "NOT_FOUND") {
+                        document.getElementById('status').innerText = "ITEM NOT FOUND: " + decodedText;
+                    } else {
+                        document.getElementById('status').innerText = "CONNECTION ERROR";
+                    }
+                    setTimeout(() => {
+                        isProcessing = false;
+                        document.getElementById('status').innerText = "READY";
+                    }, 3000);
+                });
+        }
+
+        function finishShopping() {
+            tg.sendData("VIEW_CART");
+            tg.close();
+        }
+
+        const html5QrCode = new Html5Qrcode("reader");
+        const config = {
+            fps: 15,
+            qrbox: { width: 280, height: 180 },
+            formatsToSupport: [
+                Html5QrcodeSupportedFormats.EAN_13,
+                Html5QrcodeSupportedFormats.EAN_8,
+                Html5QrcodeSupportedFormats.CODE_128,
+                Html5QrcodeSupportedFormats.CODE_39,
+                Html5QrcodeSupportedFormats.UPC_A,
+                Html5QrcodeSupportedFormats.UPC_E,
+                Html5QrcodeSupportedFormats.ITF,
+                Html5QrcodeSupportedFormats.QR_CODE
+            ]
+        };
+
+        Html5Qrcode.getCameras().then(cameras => {
+            if (cameras && cameras.length > 0) {
+                // Prefer back camera
+                const backCamera = cameras.find(c => c.label.toLowerCase().includes('back')) || cameras[cameras.length - 1];
+                html5QrCode.start(backCamera.id, config, onScanSuccess)
+                    .then(() => {
+                        document.getElementById('status').innerText = "ALIGN BARCODE TO SCAN";
+                    })
+                    .catch(err => {
+                        console.error("Camera start error:", err);
+                        document.getElementById('status').innerText = "CAMERA ERROR - TAP TO RETRY";
+                    });
+            } else {
+                document.getElementById('status').innerText = "NO CAMERA DETECTED";
+            }
+        }).catch(err => {
+            console.error("Camera access error:", err);
+            document.getElementById('status').innerText = "CAMERA PERMISSION DENIED";
+        });
+    </script>
+</body>
+
+</html>
