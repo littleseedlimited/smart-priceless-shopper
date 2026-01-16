@@ -175,6 +175,9 @@ const AdminInventory = ({ adminUsername }) => {
             const method = isAdding ? 'POST' : 'PUT';
 
             const trimmedBarcode = String(editForm.barcode).trim();
+
+            // If we have a new captured image, we'll send it as part of the initial creation
+            // or as a separate update if editing.
             const res = await fetch(endpoint, {
                 method,
                 headers,
@@ -182,6 +185,15 @@ const AdminInventory = ({ adminUsername }) => {
             });
 
             if (res.ok) {
+                // If we captured a new image while EDITING, upload it to the array endpoint
+                if (!isAdding && editForm.newImage) {
+                    await fetch(`${API_BASE}/admin/products/${trimmedBarcode}/image`, {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify({ image: editForm.newImage })
+                    });
+                }
+
                 fetchProducts();
                 setEditingBarcode(null);
                 setIsAdding(false);
@@ -265,7 +277,10 @@ const AdminInventory = ({ adminUsername }) => {
         resizedCanvas.getContext('2d').drawImage(canvas, 0, 0, 400, resizedCanvas.height);
 
         const imageData = resizedCanvas.toDataURL('image/jpeg', 0.7);
-        setEditForm(prev => ({ ...prev, image: imageData }));
+        setEditForm(prev => {
+            if (isAdding) return { ...prev, images: [...(prev.images || []), imageData] };
+            return { ...prev, newImage: imageData };
+        });
 
         // Stop camera
         const tracks = videoRef.current.srcObject.getTracks();
@@ -343,8 +358,19 @@ const AdminInventory = ({ adminUsername }) => {
                             {filteredProducts.map(p => (
                                 <tr key={p.barcode} style={{ borderBottom: '1px solid var(--surface-border)', fontSize: '14px' }}>
                                     <td style={{ padding: '16px 20px' }}>
-                                        <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#333', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            {p.image ? <img src={p.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Package size={20} color="#666" />}
+                                        <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#333', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                                            {p.images && p.images.length > 0 ? (
+                                                <>
+                                                    <img src={p.images[0]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    {p.images.length > 1 && (
+                                                        <div style={{ position: 'absolute', bottom: 0, right: 0, background: 'var(--brand-red)', color: 'white', fontSize: '10px', padding: '1px 4px', borderRadius: '4px 0 0 0', fontWeight: 'bold' }}>
+                                                            +{p.images.length - 1}
+                                                        </div>
+                                                    )}
+                                                </>
+                                            ) : p.image ? (
+                                                <img src={p.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            ) : <Package size={20} color="#666" />}
                                         </div>
                                     </td>
                                     <td style={{ padding: '16px 20px', fontWeight: 'bold' }}>{p.barcode}</td>

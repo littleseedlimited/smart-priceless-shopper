@@ -136,7 +136,7 @@ app.post('/api/admin/products', checkRole(['SUPER_ADMIN', 'INVENTORY_MANAGER']),
     price: parseInt(price) || 0,
     category,
     description,
-    image: req.body.image || null, // Handle image on creation
+    images: req.body.images || (req.body.image ? [req.body.image] : []), // Support array of images
     createdAt: new Date()
   };
   db.products.push(product);
@@ -150,9 +150,10 @@ app.post('/api/admin/products/:barcode/image', checkRole(['SUPER_ADMIN', 'INVENT
   const index = db.products.findIndex(p => String(p.barcode).trim() === barcode);
 
   if (index !== -1) {
-    db.products[index].image = req.body.image; // Base64 string
+    if (!db.products[index].images) db.products[index].images = [];
+    db.products[index].images.push(req.body.image); // Add to array
     saveDb();
-    res.json({ message: 'Image uploaded successfully', barcode });
+    res.json({ message: 'Image added successfully', barcode, count: db.products[index].images.length });
   } else {
     res.status(404).json({ error: 'Product not found' });
   }
@@ -167,18 +168,16 @@ app.post('/api/vision/identify', (req, res) => {
 
   // SIMULATED AI VISION LOGIC:
   // In a real app, you'd send this base64 to Google Gemini / Vision API
-  // For now, we search for products that have a matching image (very basic)
-  // or return the product if the "image" string contains a keyword matching a product.
+  // For now, we simulate finding products that have any images stored.
 
-  // To simulate "accuracy", we'll check if the image has been previously tagged or 
-  // just return a match for demonstration if there's only one product.
-  const product = db.products.find(p => p.image && p.image.length > 100); // Find any product with a real image
+  // We filter products that have at least one image in their images array
+  const matches = db.products.filter(p => (p.images && p.images.length > 0) || (p.image));
 
-  if (product) {
-    console.log(`[AI Vision] Identified: ${product.name}`);
-    res.json({ product });
+  if (matches.length > 0) {
+    console.log(`[AI Vision] Identified ${matches.length} products visually.`);
+    res.json({ products: matches }); // Return array of products
   } else {
-    res.status(404).json({ error: 'No product matched this visual profile' });
+    res.status(404).json({ error: 'No products recognized in this image' });
   }
 });
 
