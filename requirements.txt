@@ -3,3 +3,5 @@ requests
 python-dotenv
 pandas
 openpyxl
+opencv-python-headless
+numpy
