@@ -8,6 +8,7 @@ import StaffScanner from './components/StaffScanner';
 import AdminDashboard from './components/AdminDashboard';
 import Profile from './components/Profile';
 import History from './components/History';
+import Wallet from './components/Wallet';
 import './index.css';
 
 const App = () => {
@@ -51,6 +52,7 @@ const App = () => {
           <Route path="/checkout" element={<Checkout user={user} outlet={activeOutlet} />} />
           <Route path="/profile" element={<Profile user={user} onUpdate={handleUserUpdate} />} />
           <Route path="/history" element={<History user={user} />} />
+          <Route path="/wallet" element={<Wallet user={user} />} />
           <Route path="/staff" element={<StaffScanner />} />
           <Route path="/admin" element={<AdminDashboard />} />
         </Routes>

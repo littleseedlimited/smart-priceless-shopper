@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Phone, Mail, Save, ArrowLeft, CheckCircle } from 'lucide-react';
+import { User, Phone, Mail, Save, ArrowLeft, CheckCircle, Wallet, ChevronRight } from 'lucide-react';
 import axios from 'axios';
 
 const Profile = ({ user, onUpdate }) => {
@@ -12,6 +12,21 @@ const Profile = ({ user, onUpdate }) => {
     });
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
+    const [balance, setBalance] = useState(0);
+
+    const API_BASE = '/api';
+
+    useEffect(() => {
+        const fetchWallet = async () => {
+            try {
+                const res = await axios.get(`${API_BASE}/users/${user.id}/wallet`);
+                setBalance(res.data.balance);
+            } catch (err) {
+                console.error(err);
+            }
+        };
+        if (user?.id) fetchWallet();
+    }, [user]);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -21,7 +36,7 @@ const Profile = ({ user, onUpdate }) => {
         e.preventDefault();
         setLoading(true);
         try {
-            const response = await axios.put(`http://localhost:5000/api/users/${user.id}`, formData);
+            const response = await axios.put(`${API_BASE}/users/${user.id}`, formData);
             onUpdate(response.data.user);
             setSuccess(true);
             setTimeout(() => setSuccess(false), 3000);
@@ -54,6 +69,32 @@ const Profile = ({ user, onUpdate }) => {
                     </div>
                     <h2 style={{ fontSize: '20px', fontWeight: '800' }}>{user?.name}</h2>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Shopper ID: {user?.id}</p>
+                </div>
+
+                <div
+                    onClick={() => navigate('/wallet')}
+                    className="glass-card"
+                    style={{
+                        margin: '0 -10px 32px -10px',
+                        padding: '16px',
+                        background: 'rgba(99, 102, 241, 0.05)',
+                        border: '1px solid rgba(99, 102, 241, 0.1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        cursor: 'pointer'
+                    }}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'var(--brand-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Wallet size={20} color="white" />
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '12px', opacity: 0.6 }}>Priceless Wallet</div>
+                            <div style={{ fontWeight: '800', fontSize: '16px' }}>₦{balance.toLocaleString()}</div>
+                        </div>
+                    </div>
+                    <ChevronRight size={20} opacity={0.3} />
                 </div>
 
                 <form onSubmit={handleSubmit}>

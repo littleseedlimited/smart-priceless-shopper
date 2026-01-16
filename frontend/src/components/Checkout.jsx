@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CreditCard, ArrowLeft, CheckCircle2, QrCode, Download, ExternalLink } from 'lucide-react';
+import { CreditCard, ArrowLeft, CheckCircle2, QrCode, Download, ExternalLink, Wallet } from 'lucide-react';
 import axios from 'axios';
 
 const Checkout = ({ user, outlet }) => {
@@ -8,9 +8,24 @@ const Checkout = ({ user, outlet }) => {
     const [loading, setLoading] = useState(false);
     const [paid, setPaid] = useState(false);
     const [exitQr, setExitQr] = useState(null);
+    const [balance, setBalance] = useState(0);
+    const [paymentMethod, setPaymentMethod] = useState('Paystack'); // 'Paystack', 'Priceless Wallet', 'Cash'
 
     const cart = JSON.parse(localStorage.getItem('shopper_cart') || '[]');
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const API_BASE = '/api';
+
+    useEffect(() => {
+        const fetchWallet = async () => {
+            try {
+                const res = await axios.get(`${API_BASE}/users/${user.id}/wallet`);
+                setBalance(res.data.balance);
+            } catch (err) {
+                console.error(err);
+            }
+        };
+        if (user?.id) fetchWallet();
+    }, [user]);
 
     useEffect(() => {
         const tg = window.Telegram?.WebApp;
@@ -20,7 +35,7 @@ const Checkout = ({ user, outlet }) => {
             tg.MainButton.onClick(handlePayment);
         }
         return () => tg?.MainButton.hide();
-    }, [total, paid]);
+    }, [total, paid, paymentMethod]);
 
     const handlePayment = async () => {
         setLoading(true);
@@ -28,13 +43,21 @@ const Checkout = ({ user, outlet }) => {
         if (tg) tg.MainButton.showProgress();
 
         try {
-            // Simulate API call to process payment
-            const response = await axios.post('http://localhost:5000/api/checkout', {
+            // Validate balance for Wallet payment
+            if (paymentMethod === 'Priceless Wallet' && balance < total) {
+                alert("Insufficient wallet balance. Please fund your wallet or choose another method.");
+                setLoading(false);
+                if (tg) tg.MainButton.hideProgress();
+                return;
+            }
+
+            const response = await axios.post(`${API_BASE}/checkout`, {
                 userId: user?.id,
                 outletId: outlet?.id,
                 items: cart,
                 totalAmount: total,
-                paymentMethod: 'card'
+                paymentMethod: paymentMethod,
+                paymentRef: `SHP-${Date.now()}`
             });
 
             setExitQr(response.data.exitQrCode);
@@ -124,35 +147,59 @@ const Checkout = ({ user, outlet }) => {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div
-                        onClick={() => { }}
+                        onClick={() => setPaymentMethod('Priceless Wallet')}
                         style={{
-                            background: 'rgba(99, 102, 241, 0.1)', border: '1px solid var(--primary)',
+                            background: paymentMethod === 'Priceless Wallet' ? 'rgba(99, 102, 241, 0.1)' : 'var(--surface)',
+                            border: `1px solid ${paymentMethod === 'Priceless Wallet' ? 'var(--brand-blue)' : 'var(--surface-border)'}`,
                             borderRadius: '16px', padding: '16px', display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer'
                         }}
                     >
-                        <CreditCard color="var(--primary)" />
+                        <Wallet color={paymentMethod === 'Priceless Wallet' ? 'var(--brand-blue)' : 'var(--text-secondary)'} />
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: '600' }}>In-App Card Payment</div>
-                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Secure payment via Paystack</div>
+                            <div style={{ fontWeight: '600' }}>Priceless Wallet</div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                {balance < total ? 'Insufficient Balance' : `Available: ₦${balance.toLocaleString()}`}
+                            </div>
                         </div>
-                        <div style={{ width: '20px', height: '20px', borderRadius: '50%', border: '2px solid var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--primary)' }}></div>
+                        <div style={{ width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${paymentMethod === 'Priceless Wallet' ? 'var(--brand-blue)' : 'var(--surface-border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {paymentMethod === 'Priceless Wallet' && <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--brand-blue)' }}></div>}
                         </div>
                     </div>
 
                     <div
-                        onClick={() => { }}
+                        onClick={() => setPaymentMethod('Paystack')}
                         style={{
-                            background: 'var(--surface)', border: '1px solid var(--surface-border)',
+                            background: paymentMethod === 'Paystack' ? 'rgba(99, 102, 241, 0.1)' : 'var(--surface)',
+                            border: `1px solid ${paymentMethod === 'Paystack' ? 'var(--primary)' : 'var(--surface-border)'}`,
                             borderRadius: '16px', padding: '16px', display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer'
                         }}
                     >
-                        <QrCode color="var(--text-secondary)" />
+                        <CreditCard color={paymentMethod === 'Paystack' ? 'var(--primary)' : 'var(--text-secondary)'} />
+                        <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: '600' }}>In-App Card Payment</div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Secure payment via Paystack</div>
+                        </div>
+                        <div style={{ width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${paymentMethod === 'Paystack' ? 'var(--primary)' : 'var(--surface-border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {paymentMethod === 'Paystack' && <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--primary)' }}></div>}
+                        </div>
+                    </div>
+
+                    <div
+                        onClick={() => setPaymentMethod('Cash')}
+                        style={{
+                            background: paymentMethod === 'Cash' ? 'rgba(255, 130, 32, 0.1)' : 'var(--surface)',
+                            border: `1px solid ${paymentMethod === 'Cash' ? 'var(--brand-orange)' : 'var(--surface-border)'}`,
+                            borderRadius: '16px', padding: '16px', display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer'
+                        }}
+                    >
+                        <QrCode color={paymentMethod === 'Cash' ? 'var(--brand-orange)' : 'var(--text-secondary)'} />
                         <div style={{ flex: 1 }}>
                             <div style={{ fontWeight: '600' }}>Pay at Exit Point</div>
                             <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Show cart to cashier and pay</div>
                         </div>
-                        <div style={{ width: '20px', height: '20px', borderRadius: '50%', border: '1px solid var(--surface-border)' }}></div>
+                        <div style={{ width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${paymentMethod === 'Cash' ? 'var(--brand-orange)' : 'var(--surface-border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {paymentMethod === 'Cash' && <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--brand-orange)' }}></div>}
+                        </div>
                     </div>
                 </div>
 

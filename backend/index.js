@@ -77,10 +77,12 @@ if (fs.existsSync(DB_FILE)) {
 
 const saveDb = () => {
   try {
-    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
-    console.log(`[Database] Saved ${db.products.length} products to ${DB_FILE}`);
+    const absolutePath = path.resolve(DB_FILE);
+    fs.writeFileSync(absolutePath, JSON.stringify(db, null, 2));
+    console.log(`[Database] Successfully saved to: ${absolutePath}`);
+    console.log(`[Database] Current products count: ${db.products.length}`);
   } catch (err) {
-    console.error(`[Database] Error saving DB: ${err.message}`);
+    console.error(`[Database] CRITICAL ERROR saving DB: ${err.message}`);
   }
 };
 
@@ -319,38 +321,7 @@ app.delete('/api/admin/products/:barcode', checkRole(['SUPER_ADMIN']), (req, res
   }
 });
 
-// --- Order & Payment Endpoints ---
-
-app.post('/api/orders', (req, res) => {
-  const { userId, items, total, paymentMethod, paymentRef } = req.body;
-
-  if (!userId || !items || !total) {
-    return res.status(400).json({ error: 'Missing order details' });
-  }
-
-  const order = {
-    orderId: `ORD-${Date.now()}-${userId}`,
-    userId,
-    items,
-    total: parseFloat(total),
-    paymentMethod,
-    paymentRef,
-    status: 'COMPLETED',
-    createdAt: new Date()
-  };
-
-  db.orders.push(order);
-
-  // Clear User Cart
-  const user = db.users.find(u => String(u.telegramId) === String(userId));
-  if (user) {
-    user.cart = [];
-  }
-
-  saveDb();
-  console.log(`[Order] Created: ${order.orderId} for User: ${userId}`);
-  res.status(201).json(order);
-});
+// Redundant app.post('/api/orders') removed in favor of consolidated /api/checkout
 
 app.get('/api/orders/user/:userId', (req, res) => {
   const userId = String(req.params.userId);
@@ -487,6 +458,43 @@ app.post('/api/users/register', (req, res) => {
   res.status(201).json({ message: 'Registration successful', loginCode });
 });
 
+// --- Wallet Endpoints ---
+
+app.get('/api/users/:userId/wallet', (req, res) => {
+  const user = db.users.find(u => String(u.userId) === String(req.params.userId));
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  res.json({
+    balance: user.walletBalance || 0,
+    transactions: user.walletTransactions || []
+  });
+});
+
+app.post('/api/users/:userId/wallet/fund', (req, res) => {
+  const { amount, method, reference } = req.body;
+  const user = db.users.find(u => String(u.userId) === String(req.params.userId));
+
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  if (!amount || amount <= 0) return res.status(400).json({ error: 'Invalid amount' });
+
+  const fundingAmount = parseFloat(amount);
+  user.walletBalance = (user.walletBalance || 0) + fundingAmount;
+
+  if (!user.walletTransactions) user.walletTransactions = [];
+  user.walletTransactions.push({
+    id: `TXN-F-${Date.now()}`,
+    type: 'CREDIT',
+    amount: fundingAmount,
+    method: method || 'Manual',
+    reference: reference || 'N/A',
+    purpose: 'Wallet Funding',
+    date: new Date()
+  });
+
+  saveDb();
+  res.json({ message: 'Wallet funded successfully', balance: user.walletBalance });
+});
+
 app.post('/api/users/login', (req, res) => {
   const { userId, code } = req.body;
   const userIndex = db.users.findIndex(u => u.userId == userId);
@@ -564,20 +572,79 @@ app.post('/api/cart/clear', (req, res) => {
 // --- Checkout & Transactions ---
 
 app.post('/api/checkout', (req, res) => {
-  const { userId, outletId, items, totalAmount, paymentMethod } = req.body;
-  const transactionId = `TXN-${Date.now()}`;
-  const newTransaction = {
-    id: transactionId,
+  const { userId, outletId, items, totalAmount, paymentMethod, paymentRef } = req.body;
+
+  if (!userId || !items || !totalAmount) {
+    return res.status(400).json({ error: 'Missing checkout details' });
+  }
+
+  const amount = parseFloat(totalAmount);
+
+  // 1. Handle Wallet Payment
+  if (paymentMethod === 'Priceless Wallet') {
+    const user = db.users.find(u => String(u.userId) === String(userId));
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if ((user.walletBalance || 0) < amount) {
+      return res.status(400).json({ error: 'Insufficient wallet balance' });
+    }
+
+    user.walletBalance -= amount;
+    if (!user.walletTransactions) user.walletTransactions = [];
+    user.walletTransactions.push({
+      id: `TXN-${Date.now()}`,
+      type: 'DEBIT',
+      amount,
+      purpose: `Order at ${outletId || 'Priceless Store'}`,
+      date: new Date()
+    });
+  }
+
+  // 2. Create Order (for History & Receipts)
+  const orderId = `ORD-${Date.now()}-${userId}`;
+  const order = {
+    orderId,
+    userId,
+    outletId,
+    items, // [{barcode, name, price, quantity}]
+    total: amount,
+    paymentMethod,
+    paymentRef: paymentRef || `AUTO-${Date.now()}`,
+    status: 'COMPLETED',
+    createdAt: new Date()
+  };
+  db.orders.push(order);
+
+  // 3. Create Transaction (for Analytics)
+  const transaction = {
+    id: `TXN-OR-${Date.now()}`,
+    orderId,
     userId,
     outletId,
     items,
-    totalAmount,
+    totalAmount: amount,
     status: 'paid',
     timestamp: new Date()
   };
-  db.transactions.push(newTransaction);
+  db.transactions.push(transaction);
+
+  // 4. Clear User Cart (Both types)
+  if (db.carts && db.carts[userId]) {
+    db.carts[userId] = [];
+  }
+  const userInDb = db.users.find(u => String(u.userId) === String(userId));
+  if (userInDb) {
+    userInDb.cart = [];
+  }
+
   saveDb();
-  res.status(201).json({ transactionId, exitQrCode: transactionId });
+  console.log(`[Checkout] SUCCESS: ${orderId} via ${paymentMethod} for User: ${userId}`);
+  res.status(201).json({
+    message: 'Payment Successful',
+    orderId,
+    exitQrCode: orderId,
+    newBalance: paymentMethod === 'Priceless Wallet' ? userInDb?.walletBalance : undefined
+  });
 });
 
 app.get('/api/transactions/:userId', (req, res) => {

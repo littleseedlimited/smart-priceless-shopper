@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, ShoppingBag, ChevronRight, Receipt, Printer, X } from 'lucide-react';
+import { ArrowLeft, Clock, ShoppingBag, ChevronRight, Receipt, Printer, X, FileText } from 'lucide-react';
 import axios from 'axios';
 
 const ReceiptModal = ({ order, onClose }) => {
@@ -119,38 +119,52 @@ const History = ({ user }) => {
                     </button>
                 </div>
             ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {orders.map(order => (
-                        <div key={order.orderId} className="glass-card" style={{ padding: '20px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(99, 102, 241, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <Receipt size={20} color="var(--primary)" />
-                                    </div>
-                                    <div>
-                                        <div style={{ fontWeight: '700', fontSize: '14px' }}>#{order.orderId.split('-')[1].slice(-6)}</div>
-                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <Clock size={10} /> {new Date(order.createdAt).toLocaleDateString()}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    {Object.entries(
+                        orders.reduce((groups, order) => {
+                            const date = new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+                            if (!groups[date]) groups[date] = [];
+                            groups[date].push(order);
+                            return groups;
+                        }, {})
+                    ).map(([date, dateOrders]) => (
+                        <div key={date}>
+                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '800', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.05em' }}>{date}</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {dateOrders.map(order => (
+                                    <div key={order.orderId} className="glass-card" style={{ padding: '20px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(99, 102, 241, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <Receipt size={20} color="var(--brand-blue)" />
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontWeight: '700', fontSize: '14px' }}>#{order.orderId.split('-')[1].slice(-6)}</div>
+                                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                        <Clock size={10} /> {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={{ fontWeight: '800', color: 'var(--success)' }}>₦{order.total.toLocaleString()}</div>
+                                                <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>{order.paymentMethod}</div>
+                                            </div>
                                         </div>
+
+                                        <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                                            {order.items.length} items purchased
+                                        </div>
+
+                                        <button
+                                            className="primary-button"
+                                            style={{ width: '100%', height: '44px', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                            onClick={() => setSelectedOrder(order)}
+                                        >
+                                            <FileText size={16} /> View & Print Receipt
+                                        </button>
                                     </div>
-                                </div>
-                                <div style={{ textAlign: 'right' }}>
-                                    <div style={{ fontWeight: '800', color: 'var(--success)' }}>₦{order.total.toLocaleString()}</div>
-                                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>{order.paymentMethod}</div>
-                                </div>
+                                ))}
                             </div>
-
-                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-                                {order.items.length} items purchased
-                            </div>
-
-                            <button
-                                className="primary-button"
-                                style={{ width: '100%', height: '44px', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                                onClick={() => setSelectedOrder(order)}
-                            >
-                                <FileText size={16} /> View & Print Receipt
-                            </button>
                         </div>
                     ))}
                 </div>

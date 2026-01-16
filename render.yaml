@@ -12,11 +12,21 @@ services:
         value: /opt/render/project/src/backend/db.json
       - key: NODE_ENV
         value: production
-      - key: NPM_CONFIG_PRODUCTION
-        value: false
+      - key: GEMINI_API_KEY
+        sync: false
+
+  - type: worker
+    name: smart-priceless-bot
+    env: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python bot.py"
+    envVars:
       - key: TELEGRAM_BOT_TOKEN
         sync: false
+      - key: API_BASE
+        value: https://smart-priceless-shopper.onrender.com
       - key: WEB_APP_URL
-        sync: false
+        value: https://smart-priceless-shopper.onrender.com
       - key: GEMINI_API_KEY
         sync: false
