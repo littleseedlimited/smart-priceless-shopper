@@ -13,6 +13,8 @@ import pandas as pd
 import io
 import json
 import time
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 load_dotenv()
 
@@ -599,4 +601,22 @@ if __name__ == '__main__':
     application.add_handler(MessageHandler(filters.TEXT & ~(filters.COMMAND), handle_text_messages))
     
     print("Priceless Secure Bot is LIVE")
+    
+    # Health check server for Railway/Render
+    class HealthCheckHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"OK")
+        def log_message(self, format, *args):
+            return # Quiet logs
+
+    def run_health_check():
+        port = int(os.environ.get("PORT", 8080))
+        server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
+        print(f"Health check server running on port {port}")
+        server.serve_forever()
+
+    threading.Thread(target=run_health_check, daemon=True).start()
+    
     application.run_polling()

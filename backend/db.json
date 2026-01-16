@@ -55,6 +55,30 @@
       "category": "Beverages",
       "description": "",
       "createdAt": "2026-01-14T19:00:03.682Z"
+    },
+    {
+      "barcode": "6033000683113",
+      "name": "Nestle Milo sachet 20 g",
+      "price": 250,
+      "category": "Beverages ",
+      "description": "",
+      "createdAt": "2026-01-15T14:05:48.030Z"
+    },
+    {
+      "barcode": "691325634683",
+      "name": "Yana Premium water",
+      "price": 500,
+      "category": "Water",
+      "description": "",
+      "createdAt": "2026-01-15T15:40:09.237Z"
+    },
+    {
+      "barcode": "714084851204",
+      "name": "Checkers custard",
+      "price": 3000,
+      "category": "Provision ",
+      "description": "",
+      "createdAt": "2026-01-15T18:24:49.565Z"
     }
   ],
   "users": [
@@ -66,6 +90,15 @@
       "loginCode": "298220",
       "sessionActive": true,
       "registeredAt": "2026-01-13T21:09:24.678Z"
+    },
+    {
+      "userId": 7272393909,
+      "name": "Diala Emmanuel ikechukwu",
+      "email": "ikechukeudiala@gmail.com",
+      "phone": "07049641789",
+      "loginCode": "571046",
+      "sessionActive": true,
+      "registeredAt": "2026-01-15T18:22:12.766Z"
     }
   ],
   "transactions": [],
@@ -105,8 +138,40 @@
         "category": "Dairy",
         "description": "",
         "createdAt": "2026-01-14T17:27:34.467Z",
-        "quantity": 3,
+        "quantity": 7,
         "scanTime": "2026-01-14T18:15:13.258Z"
+      },
+      {
+        "barcode": "6033000683113",
+        "name": "Nestle Milo sachet 20 g",
+        "price": 250,
+        "category": "Beverages ",
+        "description": "",
+        "createdAt": "2026-01-15T14:05:48.030Z",
+        "quantity": 11,
+        "scanTime": "2026-01-15T14:06:22.336Z"
+      },
+      {
+        "barcode": "691325634683",
+        "name": "Yana Premium water",
+        "price": 500,
+        "category": "Water",
+        "description": "",
+        "createdAt": "2026-01-15T15:40:09.237Z",
+        "quantity": 7,
+        "scanTime": "2026-01-15T15:40:36.823Z"
+      }
+    ],
+    "7272393909": [
+      {
+        "barcode": "6151100052476",
+        "name": "Hollandia Evaporated milk 190g",
+        "price": 750,
+        "category": "Dairy",
+        "description": "",
+        "createdAt": "2026-01-14T17:27:34.467Z",
+        "quantity": 1,
+        "scanTime": "2026-01-15T18:34:22.145Z"
       }
     ]
   },
