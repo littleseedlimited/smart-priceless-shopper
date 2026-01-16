@@ -18,3 +18,5 @@ services:
         sync: false
       - key: WEB_APP_URL
         sync: false
+      - key: GEMINI_API_KEY
+        sync: false
