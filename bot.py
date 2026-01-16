@@ -342,7 +342,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             await query.edit_message_text(f"⚠️ Error loading checkout: {e}")
     
-    # --- Payment Method Handlers ---
+    elif data == 'clear_cart':
+        user_id = query.from_user.id
+        try:
+            requests.post(f"{API_URL}/cart/clear", json={"userId": user_id})
+            await query.edit_message_text("🗑️ Your cart has been cleared.")
+        except:
+            await query.edit_message_text("⚠️ Error clearing cart.")
+    
     elif data.startswith('pay_stars_'):
         amount = int(data.split('_')[2])
         # Placeholder for Telegram Stars payment

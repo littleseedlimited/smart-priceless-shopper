@@ -252,8 +252,13 @@
     <div id="reader"></div>
     <div class="overlay">
         <div class="header">
-            <div class="brand-name">Priceless Shopper</div>
-            <div class="instruction">Keep scanning to add more items</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <div class="brand-name">Priceless Shopper</div>
+                <button onclick="handleClear()"
+                    style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; font-size: 11px; padding: 5px 10px; border-radius: 8px; font-weight: 700; cursor: pointer;">CLEAR
+                    CART</button>
+            </div>
+            <div class="instruction" id="header-instruction">AI Vision & Barcode active</div>
         </div>
         <div class="scanner-viewfinder">
             <div class="frame">
@@ -512,13 +517,13 @@
             if (!video) return;
 
             const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 400;
+            const MAX_WIDTH = 800; // Higher resolution for better recognition
             const scale = MAX_WIDTH / video.videoWidth;
             canvas.width = MAX_WIDTH;
             canvas.height = video.videoHeight * scale;
 
             canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-            const imageData = canvas.toDataURL('image/jpeg', 0.5);
+            const imageData = canvas.toDataURL('image/jpeg', 0.7); // 70% quality for clarity
 
             fetch('/api/vision/identify', {
                 method: 'POST',
@@ -627,6 +632,22 @@
         function finishShopping() {
             tg.sendData("VIEW_CART");
             tg.close();
+        }
+
+        function handleClear() {
+            if (!userId) return alert("User ID missing");
+            if (!confirm("Clear your entire cart?")) return;
+
+            fetch('/api/cart/clear', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId })
+            })
+                .then(() => {
+                    document.getElementById('status').innerHTML = '<span style="color: var(--brand-orange)">🗑️ CART CLEARED</span>';
+                    setTimeout(() => document.getElementById('status').innerText = "READY", 2000);
+                })
+                .catch(err => alert("Error clearing cart"));
         }
 
         const html5QrCode = new Html5Qrcode("reader");

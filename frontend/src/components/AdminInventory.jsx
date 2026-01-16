@@ -276,14 +276,15 @@ const AdminInventory = ({ adminUsername }) => {
         canvas.height = videoRef.current.videoHeight;
         canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
 
-        // Resize to lightweight (e.g., 400px width)
+        // Resize to lightweight (e.g., 800px width)
         const resizedCanvas = document.createElement('canvas');
-        const scale = 400 / canvas.width;
-        resizedCanvas.width = 400;
+        const MAX_WIDTH = 800;
+        const scale = MAX_WIDTH / canvas.width;
+        resizedCanvas.width = MAX_WIDTH;
         resizedCanvas.height = canvas.height * scale;
-        resizedCanvas.getContext('2d').drawImage(canvas, 0, 0, 400, resizedCanvas.height);
+        resizedCanvas.getContext('2d').drawImage(canvas, 0, 0, MAX_WIDTH, resizedCanvas.height);
 
-        const imageData = resizedCanvas.toDataURL('image/jpeg', 0.7);
+        const imageData = resizedCanvas.toDataURL('image/jpeg', 0.8);
         setEditForm(prev => {
             if (isAdding) return { ...prev, images: [...(prev.images || []), imageData] };
             return { ...prev, newImage: imageData };
@@ -413,7 +414,11 @@ const AdminInventory = ({ adminUsername }) => {
                                 <tr style={{ background: 'rgba(245, 130, 32, 0.05)' }}>
                                     <td style={{ padding: '16px 20px' }}>
                                         <div onClick={startCamera} style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#333', overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            {editForm.image ? <img src={editForm.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Camera size={20} color="#666" />}
+                                            {editForm.images && editForm.images.length > 0 ? (
+                                                <img src={editForm.images[editForm.images.length - 1]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            ) : editForm.image ? (
+                                                <img src={editForm.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            ) : <Camera size={20} color="#666" />}
                                         </div>
                                     </td>
                                     <td style={{ padding: '16px 20px' }}>
