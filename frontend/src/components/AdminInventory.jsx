@@ -235,12 +235,43 @@ const AdminInventory = ({ adminUsername }) => {
         setShowAddMenu(false);
     };
 
-    const [showAddMenu, setShowAddMenu] = useState(false);
+    const [showCamera, setShowCamera] = useState(false);
+    const videoRef = useRef(null);
 
-    const filteredProducts = products.filter(p =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        String(p.barcode).includes(searchTerm)
-    );
+    const startCamera = async () => {
+        setShowCamera(true);
+        setTimeout(async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                if (videoRef.current) videoRef.current.srcObject = stream;
+            } catch (err) {
+                console.error("Camera error:", err);
+                setShowCamera(false);
+            }
+        }, 100);
+    };
+
+    const capturePhoto = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = videoRef.current.videoWidth;
+        canvas.height = videoRef.current.videoHeight;
+        canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
+
+        // Resize to lightweight (e.g., 400px width)
+        const resizedCanvas = document.createElement('canvas');
+        const scale = 400 / canvas.width;
+        resizedCanvas.width = 400;
+        resizedCanvas.height = canvas.height * scale;
+        resizedCanvas.getContext('2d').drawImage(canvas, 0, 0, 400, resizedCanvas.height);
+
+        const imageData = resizedCanvas.toDataURL('image/jpeg', 0.7);
+        setEditForm(prev => ({ ...prev, image: imageData }));
+
+        // Stop camera
+        const tracks = videoRef.current.srcObject.getTracks();
+        tracks.forEach(track => track.stop());
+        setShowCamera(false);
+    };
 
     return (
         <div className="animate-fade-in" onClick={() => showAddMenu && setShowAddMenu(false)}>
@@ -301,16 +332,21 @@ const AdminInventory = ({ adminUsername }) => {
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
                         <thead>
                             <tr style={{ borderBottom: '1px solid var(--surface-border)', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                                <th style={{ padding: '16px 20px' }}>Image</th>
                                 <th style={{ padding: '16px 20px' }}>Barcode</th>
                                 <th style={{ padding: '16px 20px' }}>Product Name</th>
                                 <th style={{ padding: '16px 20px' }}>Price (₦)</th>
-                                <th style={{ padding: '16px 20px' }}>Category</th>
                                 <th style={{ padding: '16px 20px', textAlign: 'right' }}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filteredProducts.map(p => (
                                 <tr key={p.barcode} style={{ borderBottom: '1px solid var(--surface-border)', fontSize: '14px' }}>
+                                    <td style={{ padding: '16px 20px' }}>
+                                        <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#333', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            {p.image ? <img src={p.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Package size={20} color="#666" />}
+                                        </div>
+                                    </td>
                                     <td style={{ padding: '16px 20px', fontWeight: 'bold' }}>{p.barcode}</td>
                                     <td style={{ padding: '16px 20px' }}>
                                         {editingBarcode === p.barcode ? (
@@ -322,15 +358,11 @@ const AdminInventory = ({ adminUsername }) => {
                                             <input type="number" className="input-field" value={editForm.price} onChange={e => setEditForm({ ...editForm, price: parseInt(e.target.value) })} />
                                         ) : (p.price || 0).toLocaleString()}
                                     </td>
-                                    <td style={{ padding: '16px 20px' }}>
-                                        {editingBarcode === p.barcode ? (
-                                            <input type="text" className="input-field" value={editForm.category} onChange={e => setEditForm({ ...editForm, category: e.target.value })} />
-                                        ) : p.category}
-                                    </td>
                                     <td style={{ padding: '16px 20px', textAlign: 'right' }}>
                                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                                             {editingBarcode === p.barcode ? (
                                                 <>
+                                                    <button onClick={startCamera} style={{ background: 'var(--brand-blue)', border: 'none', borderRadius: '8px', padding: '6px', color: 'white' }}><Camera size={16} /></button>
                                                     <button onClick={handleSave} style={{ background: 'var(--success)', border: 'none', borderRadius: '8px', padding: '6px', color: 'white', cursor: 'pointer' }}><Save size={16} /></button>
                                                     <button onClick={() => { setEditingBarcode(null); setIsAdding(false); }} style={{ background: 'var(--error)', border: 'none', borderRadius: '8px', padding: '6px', color: 'white', cursor: 'pointer' }}><X size={16} /></button>
                                                 </>
@@ -347,6 +379,11 @@ const AdminInventory = ({ adminUsername }) => {
                             {isAdding && (
                                 <tr style={{ background: 'rgba(245, 130, 32, 0.05)' }}>
                                     <td style={{ padding: '16px 20px' }}>
+                                        <div onClick={startCamera} style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#333', overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            {editForm.image ? <img src={editForm.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Camera size={20} color="#666" />}
+                                        </div>
+                                    </td>
+                                    <td style={{ padding: '16px 20px' }}>
                                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                             <input type="text" className="input-field" placeholder="Barcode" value={editForm.barcode} onChange={e => setEditForm({ ...editForm, barcode: e.target.value })} />
                                             <button onClick={handleScanBarcode} style={{ background: 'var(--brand-blue)', color: 'white', border: 'none', borderRadius: '8px', padding: '10px', cursor: 'pointer' }}>
@@ -359,9 +396,6 @@ const AdminInventory = ({ adminUsername }) => {
                                     </td>
                                     <td style={{ padding: '16px 20px' }}>
                                         <input type="number" className="input-field" placeholder="Price" value={editForm.price} onChange={e => setEditForm({ ...editForm, price: parseInt(e.target.value) })} />
-                                    </td>
-                                    <td style={{ padding: '16px 20px' }}>
-                                        <input type="text" className="input-field" placeholder="Category" value={editForm.category} onChange={e => setEditForm({ ...editForm, category: e.target.value })} />
                                     </td>
                                     <td style={{ padding: '16px 20px', textAlign: 'right' }}>
                                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
@@ -376,7 +410,18 @@ const AdminInventory = ({ adminUsername }) => {
                 </div>
             </div>
 
-            {/* Scanner Modal */}
+            {/* Camera Modal */}
+            {showCamera && (
+                <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.9)', zIndex: 99999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                    <video ref={videoRef} autoPlay playsInline style={{ width: '100%', maxWidth: '500px', borderRadius: '12px' }} />
+                    <div style={{ display: 'flex', gap: '20px', marginTop: '20px' }}>
+                        <button onClick={capturePhoto} className="btn btn-primary" style={{ padding: '15px 40px', borderRadius: '30px' }}>CAPTURE PRODUCT IMAGE</button>
+                        <button onClick={() => { setShowCamera(false); if (videoRef.current?.srcObject) videoRef.current.srcObject.getTracks().forEach(t => t.stop()); }} className="btn btn-secondary">CANCEL</button>
+                    </div>
+                </div>
+            )}
+
+            {/* Existing Scanner Modal ... */}
             {showScanner && (
                 <div style={{
                     position: 'fixed',

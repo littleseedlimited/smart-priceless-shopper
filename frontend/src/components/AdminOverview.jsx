@@ -120,10 +120,19 @@ const AdminOverview = ({ adminUsername }) => {
     const fetchStats = async () => {
         try {
             const res = await fetch(`${API_BASE}/admin/stats`, { headers });
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.error || 'Failed to fetch stats');
+            }
             const data = await res.json();
             setStats(data);
+        } catch (e) {
+            console.error('Stats Fetch Error:', e);
+            // Fallback to empty stats if server is not responding correctly
+            if (!stats) setStats({ totalSales: 0, totalOrders: 0, staffCount: 0, userCount: 0 });
+        } finally {
             setLoading(false);
-        } catch (e) { console.error(e); }
+        }
     };
 
     const handleCardClick = async (type) => {

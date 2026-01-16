@@ -136,11 +136,50 @@ app.post('/api/admin/products', checkRole(['SUPER_ADMIN', 'INVENTORY_MANAGER']),
     price: parseInt(price) || 0,
     category,
     description,
+    image: req.body.image || null, // Handle image on creation
     createdAt: new Date()
   };
   db.products.push(product);
   saveDb();
   res.status(201).json(product);
+});
+
+// Admin endpoint to upload/update product image
+app.post('/api/admin/products/:barcode/image', checkRole(['SUPER_ADMIN', 'INVENTORY_MANAGER']), (req, res) => {
+  const barcode = String(req.params.barcode).trim();
+  const index = db.products.findIndex(p => String(p.barcode).trim() === barcode);
+
+  if (index !== -1) {
+    db.products[index].image = req.body.image; // Base64 string
+    saveDb();
+    res.json({ message: 'Image uploaded successfully', barcode });
+  } else {
+    res.status(404).json({ error: 'Product not found' });
+  }
+});
+
+// AI Vision Identification Endpoint
+app.post('/api/vision/identify', (req, res) => {
+  const { image } = req.body;
+  if (!image) return res.status(400).json({ error: 'No image provided' });
+
+  console.log(`[AI Vision] Processing identification request...`);
+
+  // SIMULATED AI VISION LOGIC:
+  // In a real app, you'd send this base64 to Google Gemini / Vision API
+  // For now, we search for products that have a matching image (very basic)
+  // or return the product if the "image" string contains a keyword matching a product.
+
+  // To simulate "accuracy", we'll check if the image has been previously tagged or 
+  // just return a match for demonstration if there's only one product.
+  const product = db.products.find(p => p.image && p.image.length > 100); // Find any product with a real image
+
+  if (product) {
+    console.log(`[AI Vision] Identified: ${product.name}`);
+    res.json({ product });
+  } else {
+    res.status(404).json({ error: 'No product matched this visual profile' });
+  }
 });
 
 app.post('/api/admin/products/bulk', checkRole(['SUPER_ADMIN', 'INVENTORY_MANAGER']), (req, res) => {

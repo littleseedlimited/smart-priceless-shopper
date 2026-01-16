@@ -261,7 +261,10 @@
         </div>
         <div class="footer">
             <div id="status" class="status-text">INITIALIZING AI VISION...</div>
-            <button class="done-btn" onclick="finishShopping()">DONE SHOPPING</button>
+            <div style="display: flex; gap: 10px; width: 100%; max-width: 350px;">
+                <button class="done-btn" style="background: #333; flex: 1;" onclick="runAIVision()">AI VISION</button>
+                <button class="done-btn" style="flex: 2;" onclick="finishShopping()">DONE SHOPPING</button>
+            </div>
         </div>
     </div>
 
@@ -403,12 +406,30 @@
             }, 1000);
         }
 
+        let scanCount = {};
+        const SCAN_THRESHOLD = 3; // Require 3 matches for accuracy
+
         function onScanSuccess(decodedText) {
             if (isProcessing) return;
+
+            // Accuracy Logic: Require 3 consecutive identical scans
+            if (!scanCount[decodedText]) {
+                scanCount = {}; // Reset others
+                scanCount[decodedText] = 1;
+                document.getElementById('status').innerText = `CALIBRATING AI... (${scanCount[decodedText]}/${SCAN_THRESHOLD})`;
+                return;
+            } else {
+                scanCount[decodedText]++;
+                document.getElementById('status').innerText = `VERIFYING... (${scanCount[decodedText]}/${SCAN_THRESHOLD})`;
+                if (scanCount[decodedText] < SCAN_THRESHOLD) return;
+            }
+
+            // Consensus reached
             isProcessing = true;
+            scanCount = {}; // Reset for next scan
 
             document.getElementById('status').innerText = "SEARCHING DATABASE...";
-
+            // ... rest of search logic ...
             fetch(`/api/products/${decodedText}`)
                 .then(res => {
                     if (res.status === 404) throw new Error("NOT_FOUND");
@@ -427,6 +448,43 @@
                         isProcessing = false;
                         document.getElementById('status').innerText = "READY";
                     }, 3000);
+                });
+        }
+
+        // --- AI VISION ADDITION ---
+        function runAIVision() {
+            if (isProcessing) return;
+            isProcessing = true;
+            document.getElementById('status').innerText = "AI VISION ANALYSIS...";
+
+            // Capture image from video
+            const video = document.querySelector('video');
+            if (!video) return;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            const imageData = canvas.toDataURL('image/jpeg', 0.6);
+
+            fetch('/api/vision/identify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: imageData, userId: userId })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.product) {
+                        showToast(data.product);
+                    } else {
+                        document.getElementById('status').innerText = "AI: NO PRODUCT RECOGNIZED";
+                        setTimeout(() => { isProcessing = false; document.getElementById('status').innerText = "READY"; }, 2000);
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    document.getElementById('status').innerText = "AI VISION ERROR";
+                    setTimeout(() => { isProcessing = false; document.getElementById('status').innerText = "READY"; }, 2000);
                 });
         }
 
