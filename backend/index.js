@@ -53,7 +53,8 @@ const initialDb = {
     operatingHours: '8:00 AM - 9:00 PM',
     welcomeMessage: 'Welcome to Smart Priceless Shopper! Ready to shop? 🛍️',
     contactSupport: '@priceless_support'
-  }
+  },
+  orders: []
 };
 
 let db = initialDb;
@@ -197,6 +198,92 @@ app.delete('/api/admin/products/:barcode', checkRole(['SUPER_ADMIN']), (req, res
   } else {
     res.status(404).json({ error: 'Product not found' });
   }
+});
+
+// --- Order & Payment Endpoints ---
+
+app.post('/api/orders', (req, res) => {
+  const { userId, items, total, paymentMethod, paymentRef } = req.body;
+
+  if (!userId || !items || !total) {
+    return res.status(400).json({ error: 'Missing order details' });
+  }
+
+  const order = {
+    orderId: `ORD-${Date.now()}-${userId}`,
+    userId,
+    items,
+    total: parseFloat(total),
+    paymentMethod,
+    paymentRef,
+    status: 'COMPLETED',
+    createdAt: new Date()
+  };
+
+  db.orders.push(order);
+
+  // Clear User Cart
+  const user = db.users.find(u => String(u.telegramId) === String(userId));
+  if (user) {
+    user.cart = [];
+  }
+
+  saveDb();
+  console.log(`[Order] Created: ${order.orderId} for User: ${userId}`);
+  res.status(201).json(order);
+});
+
+app.get('/api/orders/user/:userId', (req, res) => {
+  const userId = String(req.params.userId);
+  const userOrders = db.orders.filter(o => String(o.userId) === userId);
+  res.json(userOrders);
+});
+
+// --- Admin Analytics & Details ---
+
+app.get('/api/admin/stats', checkRole(['SUPER_ADMIN']), (req, res) => {
+  const totalSales = db.orders.reduce((sum, order) => sum + (order.total || 0), 0);
+  const totalOrders = db.orders.length;
+  const staffCount = db.staff.length;
+  const userCount = db.users.length;
+
+  res.json({
+    totalSales,
+    totalOrders,
+    staffCount,
+    userCount
+  });
+});
+
+app.get('/api/admin/orders', checkRole(['SUPER_ADMIN']), (req, res) => {
+  const { search } = req.query;
+  let ordersList = [...db.orders];
+
+  if (search) {
+    const s = search.toLowerCase();
+    ordersList = ordersList.filter(o =>
+      o.orderId.toLowerCase().includes(s) ||
+      String(o.userId).includes(s)
+    );
+  }
+
+  res.json(ordersList.reverse()); // Newest first
+});
+
+app.get('/api/admin/users', checkRole(['SUPER_ADMIN']), (req, res) => {
+  const { search } = req.query;
+  let usersList = [...db.users];
+
+  if (search) {
+    const s = search.toLowerCase();
+    usersList = usersList.filter(u =>
+      (u.name && u.name.toLowerCase().includes(s)) ||
+      String(u.telegramId).includes(s) ||
+      (u.email && u.email.toLowerCase().includes(s))
+    );
+  }
+
+  res.json(usersList);
 });
 
 // --- Staff Endpoints (Admin Only) ---

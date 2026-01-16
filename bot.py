@@ -413,14 +413,41 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     elif data.startswith('confirm_bank_'):
         ref_code = data.replace('confirm_bank_', '')
-        msg = (
-            "✅ *PAYMENT CONFIRMATION RECEIVED*\n\n"
-            f"Reference: `{ref_code}`\n\n"
-            "🕐 Your payment is being verified.\n"
-            "You will receive a notification once confirmed.\n\n"
-            "_Verification usually takes 5-15 minutes during business hours._"
-        )
-        await query.edit_message_text(msg, parse_mode='Markdown')
+        user_id = query.from_user.id
+        
+        try:
+            # Fetch cart items
+            cart_res = requests.get(f"{API_URL}/cart/{user_id}")
+            cart_data = cart_res.json()
+            
+            if not cart_data or not cart_data.get('items'):
+                await query.edit_message_text("⚠️ Your cart is empty. Please add items before paying.")
+                return
+
+            # Create Order
+            order_data = {
+                "userId": user_id,
+                "items": cart_data['items'],
+                "total": cart_data['total'],
+                "paymentMethod": "Bank Transfer",
+                "paymentRef": ref_code
+            }
+            
+            requests.post(f"{API_URL}/orders", json=order_data)
+
+            msg = (
+                "✅ *PAYMENT CONFIRMED & ORDER PLACED*\n\n"
+                f"Receipt Reference: `{ref_code}`\n\n"
+                "Receipt initiated! You can view and print your receipt in the shopper dashboard.\n\n"
+                "🕐 Our staff will verify the transfer and prepare your items for pickup."
+            )
+            
+            keyboard = [[InlineKeyboardButton("📜 View Digital Receipt", web_app=WebAppInfo(url=f"{WEB_APP_URL}/history"))]]
+            await query.edit_message_text(msg, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(keyboard))
+            
+        except Exception as e:
+            print(f"Checkout Error: {e}")
+            await query.edit_message_text("⚠️ Error processing your receipt. Please contact support.")
     
     elif data == 'clear_cart':
         user_id = query.from_user.id
@@ -429,13 +456,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     elif data == 'admin_stats':
         try:
-            res = requests.get(f"{API_URL}/admin/analytics", headers={'x-admin-username': 'origichidiah'}).json()
+            res = requests.get(f"{API_URL}/admin/stats", headers={'x-admin-username': 'origichidiah'}).json()
             msg = (
                 "📊 *REAL-TIME ANALYTICS*\n\n"
                 f"💰 Total Sales: ₦{res['totalSales']:,}\n"
                 f"📦 Orders: {res['totalOrders']}\n"
-                f"👥 Users: {res['totalUsers']}\n"
-                f"🏪 Products in Stock: {res['totalProducts']}"
+                f"👤 Users: {res['userCount']}\n"
+                f"🛠️ Staff: {res['staffCount']}"
             )
             await query.edit_message_text(msg, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back to Admin", callback_data="back_admin")]]))
         except:
