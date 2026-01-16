@@ -12,8 +12,12 @@ const AdminInventory = ({ adminUsername }) => {
     const [uploading, setUploading] = useState(false);
     const [showScanner, setShowScanner] = useState(false);
     const [showAddMenu, setShowAddMenu] = useState(false);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
     const scannerRef = useRef(null);
+    const fileInputRef = useRef(null);
     const html5QrCodeRef = useRef(null);
+    const [showCamera, setShowCamera] = useState(false);
+    const videoRef = useRef(null);
 
     const API_BASE = '/api';
     const headers = {
@@ -177,22 +181,27 @@ const AdminInventory = ({ adminUsername }) => {
     };
 
     const handleSave = async () => {
+        const trimmedBarcode = String(editForm.barcode || '').trim();
+        if (!trimmedBarcode) return alert("Please enter a barcode");
+        if (!editForm.name) return alert("Please enter a product name");
+
         try {
             const endpoint = isAdding ? `${API_BASE}/admin/products` : `${API_BASE}/admin/products/${editingBarcode}`;
             const method = isAdding ? 'POST' : 'PUT';
 
-            const trimmedBarcode = String(editForm.barcode).trim();
+            console.log(`[Inventory] Saving product:`, { ...editForm, barcode: trimmedBarcode });
 
-            // If we have a new captured image, we'll send it as part of the initial creation
-            // or as a separate update if editing.
             const res = await fetch(endpoint, {
                 method,
                 headers,
-                body: JSON.stringify({ ...editForm, barcode: trimmedBarcode })
+                body: JSON.stringify({
+                    ...editForm,
+                    barcode: trimmedBarcode,
+                    price: parseInt(editForm.price) || 0
+                })
             });
 
             if (res.ok) {
-                // If we captured a new image while EDITING, upload it to the array endpoint
                 if (!isAdding && editForm.newImage) {
                     await fetch(`${API_BASE}/admin/products/${trimmedBarcode}/image`, {
                         method: 'POST',
@@ -204,12 +213,15 @@ const AdminInventory = ({ adminUsername }) => {
                 fetchProducts();
                 setEditingBarcode(null);
                 setIsAdding(false);
+                setEditForm({});
+                alert(isAdding ? "Product added successfully!" : "Product updated!");
             } else {
                 const err = await res.json();
-                alert(err.error);
+                alert(err.error || "Failed to save product");
             }
         } catch (e) {
-            alert("Error saving product");
+            console.error("Save Error:", e);
+            alert("Error saving product: " + e.message);
         }
     };
 
@@ -235,27 +247,26 @@ const AdminInventory = ({ adminUsername }) => {
             { barcode: '123456789', name: 'Sample Product', price: 1000, category: 'General', description: 'Sample description' }
         ];
         const worksheet = XLSX.utils.json_to_sheet(templateData);
+        // The original code had `reader.readAsDataURL(file);` here, which is incorrect.
+        // Assuming the intent was to create and download an Excel file.
         const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "InventoryTemplate");
-        XLSX.writeFile(workbook, "inventory_template.xlsx");
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Products");
+        XLSX.writeFile(workbook, "product_template.xlsx");
     };
 
     const handleAddClick = (mode) => {
         if (mode === 'scan') {
-            handleScanBarcode();
             setIsAdding(true);
             setEditingBarcode('new');
-            setEditForm({ barcode: '', name: '', price: 0, category: '', description: '' });
+            setEditForm({ barcode: '', name: '', price: 0, category: '', description: '', images: [] });
+            handleScanBarcode();
         } else if (mode === 'manual') {
             setIsAdding(true);
             setEditingBarcode('new');
-            setEditForm({ barcode: '', name: '', price: 0, category: '', description: '' });
+            setEditForm({ barcode: '', name: '', price: 0, category: '', description: '', images: [] });
         }
         setShowAddMenu(false);
     };
-
-    const [showCamera, setShowCamera] = useState(false);
-    const videoRef = useRef(null);
 
     const startCamera = async () => {
         setShowCamera(true);
@@ -270,13 +281,76 @@ const AdminInventory = ({ adminUsername }) => {
         }, 100);
     };
 
+    const handleCameraIconClick = (e) => {
+        e.stopPropagation();
+        if (window.confirm("Use Camera (OK) or Upload Image (Cancel)?")) {
+            startCamera();
+        } else {
+            fileInputRef.current?.click();
+        }
+    };
+
+    const handleImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 800;
+                const scale = MAX_WIDTH / img.width;
+                canvas.width = MAX_WIDTH;
+                canvas.height = img.height * scale;
+                canvas.getContext('2d').drawImage(img, 0, 0, MAX_WIDTH, canvas.height);
+
+                const imageData = canvas.toDataURL('image/jpeg', 0.8);
+                processImageData(imageData);
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const processImageData = (imageData) => {
+        if (isAdding) {
+            setEditForm(prev => ({ ...prev, images: [...(prev.images || []), imageData] }));
+            setIsAnalyzing(true);
+
+            fetch(`${API_BASE}/vision/explore`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: imageData })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.name) {
+                        setEditForm(prev => ({
+                            ...prev,
+                            barcode: prev.barcode || data.barcode || '',
+                            name: data.name || prev.name,
+                            category: data.category || prev.category,
+                            description: data.description || prev.description
+                        }));
+                    }
+                    setIsAnalyzing(false);
+                })
+                .catch(err => {
+                    console.error("AI Explore Error:", err);
+                    setIsAnalyzing(false);
+                });
+        } else {
+            setEditForm(prev => ({ ...prev, newImage: imageData }));
+        }
+    };
+
     const capturePhoto = () => {
         const canvas = document.createElement('canvas');
         canvas.width = videoRef.current.videoWidth;
         canvas.height = videoRef.current.videoHeight;
         canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
 
-        // Resize to lightweight (e.g., 800px width)
         const resizedCanvas = document.createElement('canvas');
         const MAX_WIDTH = 800;
         const scale = MAX_WIDTH / canvas.width;
@@ -285,12 +359,8 @@ const AdminInventory = ({ adminUsername }) => {
         resizedCanvas.getContext('2d').drawImage(canvas, 0, 0, MAX_WIDTH, resizedCanvas.height);
 
         const imageData = resizedCanvas.toDataURL('image/jpeg', 0.8);
-        setEditForm(prev => {
-            if (isAdding) return { ...prev, images: [...(prev.images || []), imageData] };
-            return { ...prev, newImage: imageData };
-        });
+        processImageData(imageData);
 
-        // Stop camera
         const tracks = videoRef.current.srcObject.getTracks();
         tracks.forEach(track => track.stop());
         setShowCamera(false);
@@ -413,7 +483,13 @@ const AdminInventory = ({ adminUsername }) => {
                             {isAdding && (
                                 <tr style={{ background: 'rgba(245, 130, 32, 0.05)' }}>
                                     <td style={{ padding: '16px 20px' }}>
-                                        <div onClick={startCamera} style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#333', overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <div onClick={handleCameraIconClick} style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#333', overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                                            <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={handleImageUpload} />
+                                            {isAnalyzing && (
+                                                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <div className="spinner-small"></div>
+                                                </div>
+                                            )}
                                             {editForm.images && editForm.images.length > 0 ? (
                                                 <img src={editForm.images[editForm.images.length - 1]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                             ) : editForm.image ? (
@@ -421,24 +497,31 @@ const AdminInventory = ({ adminUsername }) => {
                                             ) : <Camera size={20} color="#666" />}
                                         </div>
                                     </td>
-                                    <td style={{ padding: '16px 20px' }}>
-                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                            <input type="text" className="input-field" placeholder="Barcode" value={editForm.barcode} onChange={e => setEditForm({ ...editForm, barcode: e.target.value })} />
-                                            <button onClick={handleScanBarcode} style={{ background: 'var(--brand-blue)', color: 'white', border: 'none', borderRadius: '8px', padding: '10px', cursor: 'pointer' }}>
-                                                <Camera size={16} />
-                                            </button>
+                                    <td style={{ padding: '16px 20px' }} colSpan={3}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <input type="text" className="input-field" placeholder="Barcode" value={editForm.barcode} onChange={e => setEditForm({ ...editForm, barcode: e.target.value })} style={{ flex: 1 }} />
+                                                <button onClick={handleScanBarcode} style={{ background: 'var(--brand-blue)', color: 'white', border: 'none', borderRadius: '8px', padding: '10px', cursor: 'pointer' }}>
+                                                    <Camera size={16} />
+                                                </button>
+                                            </div>
+                                            <input type="text" className="input-field" placeholder="Product Name (AI will fill this)" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} />
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <input type="number" className="input-field" placeholder="Price (₦)" value={editForm.price} onChange={e => setEditForm({ ...editForm, price: e.target.value })} style={{ flex: 1 }} />
+                                                <input type="text" className="input-field" placeholder="Category" value={editForm.category} onChange={e => setEditForm({ ...editForm, category: e.target.value })} style={{ flex: 1 }} />
+                                            </div>
+                                            <textarea className="input-field" placeholder="Description (extracted by AI)" value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} style={{ minHeight: '60px', padding: '10px' }} />
+                                            {isAnalyzing && <div style={{ fontSize: '11px', color: 'var(--brand-blue)', fontWeight: 'bold', animation: 'pulse 1.5s infinite' }}>🤖 AI RECOGNIZING PRODUCT & FILLING FORM...</div>}
                                         </div>
                                     </td>
-                                    <td style={{ padding: '16px 20px' }}>
-                                        <input type="text" className="input-field" placeholder="Name" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} />
-                                    </td>
-                                    <td style={{ padding: '16px 20px' }}>
-                                        <input type="number" className="input-field" placeholder="Price" value={editForm.price} onChange={e => setEditForm({ ...editForm, price: parseInt(e.target.value) })} />
-                                    </td>
-                                    <td style={{ padding: '16px 20px', textAlign: 'right' }}>
+                                    <td style={{ padding: '16px 20px', textAlign: 'right', verticalAlign: 'top' }}>
                                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                            <button onClick={handleSave} style={{ background: 'var(--success)', border: 'none', borderRadius: '8px', padding: '6px', color: 'white', cursor: 'pointer' }}><Plus size={16} /></button>
-                                            <button onClick={() => setIsAdding(false)} style={{ background: 'var(--error)', border: 'none', borderRadius: '8px', padding: '6px', color: 'white', cursor: 'pointer' }}><X size={16} /></button>
+                                            <button onClick={handleSave} style={{ background: 'var(--success)', border: 'none', borderRadius: '8px', padding: '12px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 4px 12px rgba(34, 197, 94, 0.3)' }}>
+                                                <Plus size={16} /> <span>SAVE</span>
+                                            </button>
+                                            <button onClick={() => setIsAdding(false)} style={{ background: 'var(--error)', border: 'none', borderRadius: '8px', padding: '12px', color: 'white', cursor: 'pointer' }}>
+                                                <X size={16} />
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>

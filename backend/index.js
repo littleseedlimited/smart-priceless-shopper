@@ -216,6 +216,52 @@ app.post('/api/vision/identify', async (req, res) => {
   res.json({ products: matches });
 });
 
+// 🔍 AI DISCOVERY (For Inventory Auto-fill)
+app.post('/api/vision/explore', async (req, res) => {
+  const { image } = req.body;
+  if (!image) return res.status(400).json({ error: 'No image provided' });
+
+  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+  if (!GEMINI_API_KEY) return res.status(503).json({ error: 'AI Service Not Configured' });
+
+  try {
+    const base64Data = image.split(',')[1];
+    const prompt = `Act as a retail expert. Look at this product image. 
+    1. Extract the barcode if clearly visible.
+    2. Identify the full product name.
+    3. Categorize it (e.g., Dairy, Beverage, Household, etc.).
+    4. Provide a brief description.
+    
+    Return the result strictly as a JSON object:
+    {"barcode": "string", "name": "string", "category": "string", "description": "string"}`;
+
+    const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { text: prompt },
+            { inline_data: { mime_type: "image/jpeg", data: base64Data } }
+          ]
+        }]
+      })
+    });
+
+    const data = await aiResponse.json();
+    let text = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+
+    // Clean JSON markdown if present
+    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const result = JSON.parse(text);
+
+    res.json(result);
+  } catch (err) {
+    console.error("[AI Explore] Error:", err);
+    res.status(500).json({ error: 'AI recognition failed' });
+  }
+});
+
 app.post('/api/admin/products/bulk', checkRole(['SUPER_ADMIN', 'INVENTORY_MANAGER']), (req, res) => {
   const products = req.body;
   if (!Array.isArray(products)) return res.status(400).json({ error: 'Expected array of products' });
