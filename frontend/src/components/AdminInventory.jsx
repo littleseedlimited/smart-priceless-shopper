@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingBag, Plus, Trash2, Edit3, Save, X, Search, Upload, Camera, XCircle } from 'lucide-react';
+import { ShoppingBag, Plus, Trash2, Edit3, Save, X, Search, Upload, Camera, XCircle, Package } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 const AdminInventory = ({ adminUsername }) => {
@@ -11,6 +11,7 @@ const AdminInventory = ({ adminUsername }) => {
     const [isAdding, setIsAdding] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [showScanner, setShowScanner] = useState(false);
+    const [showAddMenu, setShowAddMenu] = useState(false);
     const scannerRef = useRef(null);
     const html5QrCodeRef = useRef(null);
 
@@ -23,6 +24,11 @@ const AdminInventory = ({ adminUsername }) => {
     useEffect(() => {
         fetchProducts();
     }, []);
+
+    const filteredProducts = products.filter(p =>
+        (p.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        String(p.barcode || '').includes(searchTerm)
+    );
 
     // Cleanup scanner on unmount
     useEffect(() => {
@@ -51,7 +57,8 @@ const AdminInventory = ({ adminUsername }) => {
         setTimeout(async () => {
             try {
                 const Html5Qrcode = window.Html5Qrcode;
-                if (!Html5Qrcode) {
+                const Html5QrcodeSupportedFormats = window.Html5QrcodeSupportedFormats;
+                if (!Html5Qrcode || !Html5QrcodeSupportedFormats) {
                     alert("Scanner library not loaded. Please refresh the page.");
                     setShowScanner(false);
                     return;

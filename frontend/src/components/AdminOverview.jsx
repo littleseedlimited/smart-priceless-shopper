@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DollarSign, ShoppingBag, Users, Package, ArrowUpRight, Clock, User, x, Search, FileText } from 'lucide-react';
+import { DollarSign, ShoppingBag, Users, Package, ArrowUpRight, Clock, User, X, Search, FileText } from 'lucide-react';
 
 const DetailModal = ({ type, data, onClose, adminUsername }) => {
     const [search, setSearch] = useState('');
