@@ -20,9 +20,9 @@ load_dotenv()
 
 # --- Configuration ---
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8572310430:AAG_PxjRMAiAFWtLN0f7SfD4yEWD5l3qnas")
-API_BASE = os.getenv("API_BASE", "https://your-render-app.onrender.com")
+API_BASE = os.getenv("API_BASE", "https://smart-priceless-shopper.onrender.com")
 API_URL = f"{API_BASE}/api"
-WEB_APP_URL = os.getenv("WEB_APP_URL", "https://your-render-app.onrender.com")
+WEB_APP_URL = os.getenv("WEB_APP_URL", "https://smart-priceless-shopper.onrender.com")
 SCANNER_URL = f"{WEB_APP_URL}/scanner.html"
 
 # Conversation States
