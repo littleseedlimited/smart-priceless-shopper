@@ -181,14 +181,15 @@ const Shop = ({ user, outlet }) => {
                             </button>
                         </div>
 
-                        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative' }}>
-                            <div id="item-reader" style={{ width: '100%', height: '100%', objectFit: 'cover' }}></div>
+                        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative', background: '#000' }}>
+                            <div id="item-reader" style={{ width: '100%', height: '100%' }}></div>
 
                             {/* Overlay Scanner UI */}
                             <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <div style={{
-                                    width: '280px', height: '280px', border: '2px solid rgba(255,255,255,0.3)', borderRadius: '40px',
-                                    position: 'relative', overflow: 'hidden'
+                                    width: '280px', height: '200px', border: '3px solid var(--primary)', borderRadius: '24px',
+                                    position: 'relative', overflow: 'hidden',
+                                    boxShadow: '0 0 0 1000px rgba(0,0,0,0.6)'
                                 }}>
                                     <div className="scanner-laser"></div>
                                     {scanBuffer.count > 0 && (

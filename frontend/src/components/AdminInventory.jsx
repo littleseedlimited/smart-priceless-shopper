@@ -567,12 +567,39 @@ const AdminInventory = ({ adminUsername }) => {
                         <p style={{ opacity: 0.7, fontSize: '14px' }}>Align barcode within the frame</p>
                     </div>
 
-                    <div id="admin-scanner-reader" style={{
-                        width: '100%',
-                        maxWidth: '400px',
-                        borderRadius: '12px',
-                        overflow: 'hidden'
-                    }}></div>
+                    <div style={{ position: 'relative', width: '100%', maxWidth: '400px' }}>
+                        <div id="admin-scanner-reader" style={{
+                            width: '100%',
+                            borderRadius: '12px',
+                            overflow: 'hidden',
+                            background: '#000'
+                        }}></div>
+                        {/* Visual Frame Overlay */}
+                        <div style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            width: '280px',
+                            height: '180px',
+                            border: '3px solid var(--brand-blue)',
+                            borderRadius: '16px',
+                            pointerEvents: 'none',
+                            zIndex: 10,
+                            boxShadow: '0 0 0 1000px rgba(0,0,0,0.5)'
+                        }}>
+                            <div style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '0',
+                                right: '0',
+                                height: '2px',
+                                background: 'var(--brand-red)',
+                                boxShadow: '0 0 10px var(--brand-red)',
+                                animation: 'laserMove 2s infinite ease-in-out'
+                            }}></div>
+                        </div>
+                    </div>
 
                     <button
                         onClick={stopScanner}
