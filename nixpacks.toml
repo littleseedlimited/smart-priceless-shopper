@@ -1,11 +1,14 @@
 [phases.setup]
-nixPkgs = ["python311", "gcc", "libGL", "libglvnd"]
+nixPkgs = ["nodejs", "python311", "gcc", "libGL", "libglvnd"]
 
 [phases.install]
-cmds = ["python3 -m pip install --upgrade pip", "python3 -m pip install -r requirements.txt"]
+cmds = [
+    "npm run install:all",
+    "python3 -m pip install -r requirements.txt"
+]
 
 [phases.build]
-cmds = ["echo Build complete"]
+cmds = ["npm run build:frontend"]
 
 [start]
-cmd = "python3 bot.py"
+cmd = "npm start"
