@@ -37,11 +37,7 @@ const Shop = ({ user, outlet }) => {
             scanner = new Html5Qrcode("item-reader");
             const config = {
                 fps: 24,
-                qrbox: { width: 280, height: 280 },
-                experimentalFeatures: {
-                    useBarCodeDetectorIfSupported: true
-                },
-                aspectRatio: 1.0,
+                qrbox: { width: 280, height: 200 },
                 formatsToSupport: [
                     Html5QrcodeSupportedFormats.EAN_13,
                     Html5QrcodeSupportedFormats.EAN_8,

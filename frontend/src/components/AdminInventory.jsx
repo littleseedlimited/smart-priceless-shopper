@@ -78,10 +78,6 @@ const AdminInventory = ({ adminUsername }) => {
                         {
                             fps: 20,
                             qrbox: { width: 280, height: 180 },
-                            aspectRatio: 1.0,
-                            experimentalFeatures: {
-                                useBarCodeDetectorIfSupported: true
-                            },
                             formatsToSupport: [
                                 Html5QrcodeSupportedFormats.EAN_13,
                                 Html5QrcodeSupportedFormats.EAN_8,
