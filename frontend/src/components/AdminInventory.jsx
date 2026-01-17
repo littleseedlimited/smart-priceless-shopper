@@ -145,13 +145,16 @@ const AdminInventory = ({ adminUsername }) => {
                 const data = XLSX.utils.sheet_to_json(ws);
 
                 // Map common column names
-                const mappedData = data.map(row => ({
-                    barcode: String(row.barcode || row.Barcode || row.BARCODE || '').trim(),
-                    name: row.name || row.Name || row.NAME || '',
-                    price: parseInt(row.price || row.Price || row.PRICE || 0),
-                    category: row.category || row.Category || 'Other',
-                    description: row.description || row.Description || ''
-                })).filter(p => p.barcode && p.name);
+                const mappedData = data.map(row => {
+                    const barcode = String(row.barcode || row.Barcode || row.BARCODE || '').trim();
+                    return {
+                        barcode: barcode,
+                        name: (row.name || row.Name || row.NAME || '').trim(),
+                        price: parseInt(row.price || row.Price || row.PRICE || 0),
+                        category: (row.category || row.Category || 'Other').trim(),
+                        description: (row.description || row.Description || '').trim()
+                    };
+                }).filter(p => p.barcode && p.name);
 
                 if (mappedData.length === 0) throw new Error("No valid products found in file");
 
@@ -179,8 +182,9 @@ const AdminInventory = ({ adminUsername }) => {
     };
 
     const handleEdit = (product) => {
-        setEditingBarcode(product.barcode);
-        setEditForm(product);
+        const bcode = String(product.barcode || '').trim();
+        setEditingBarcode(bcode);
+        setEditForm({ ...product, barcode: bcode });
     };
 
     const handleSave = async () => {
@@ -229,9 +233,10 @@ const AdminInventory = ({ adminUsername }) => {
     };
 
     const handleDelete = async (barcode) => {
+        const bcode = String(barcode || '').trim();
         if (!window.confirm("Delete this product?")) return;
         try {
-            const res = await fetch(`${API_BASE}/admin/products/${barcode}`, {
+            const res = await fetch(`${API_BASE}/admin/products/${bcode}`, {
                 method: 'DELETE',
                 headers
             });
