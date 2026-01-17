@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { ShoppingCart, Package, Trash2, ChevronRight, X, Search, Bell, Star, Scan, Camera, Sparkles, RefreshCw } from 'lucide-react';
 import axios from 'axios';
 import BottomNav from './BottomNav';
@@ -35,16 +35,33 @@ const Shop = ({ user, outlet }) => {
         let scanner;
         if (scannerActive) {
             scanner = new Html5Qrcode("item-reader");
-            const config = { fps: 24, qrbox: { width: 280, height: 280 } };
+            const config = {
+                fps: 24,
+                qrbox: { width: 280, height: 280 },
+                experimentalFeatures: {
+                    useBarCodeDetectorIfSupported: true
+                },
+                aspectRatio: 1.0,
+                formatsToSupport: [
+                    Html5QrcodeSupportedFormats.EAN_13,
+                    Html5QrcodeSupportedFormats.EAN_8,
+                    Html5QrcodeSupportedFormats.CODE_128,
+                    Html5QrcodeSupportedFormats.CODE_39,
+                    Html5QrcodeSupportedFormats.UPC_A,
+                    Html5QrcodeSupportedFormats.UPC_E,
+                    Html5QrcodeSupportedFormats.ITF,
+                    Html5QrcodeSupportedFormats.QR_CODE
+                ]
+            };
 
             scanner.start(
                 { facingMode: "environment" },
                 config,
                 (decodedText) => {
-                    // Consensus Logic: Verify 3 times for 100% accuracy
+                    // Consensus Logic: Verify 2 times for efficiency + accuracy
                     setScanBuffer(prev => {
                         if (prev.code === decodedText) {
-                            if (prev.count + 1 >= 3) {
+                            if (prev.count + 1 >= 2) {
                                 handleConfirmScan(decodedText);
                                 return { code: '', count: 0 };
                             }
@@ -183,7 +200,7 @@ const Shop = ({ user, outlet }) => {
                                             position: 'absolute', bottom: '20px', left: '0', right: '0', textAlign: 'center',
                                             color: 'var(--primary)', fontWeight: 'bold', textShadow: '0 2px 4px rgba(0,0,0,0.5)'
                                         }}>
-                                            Verifying... {scanBuffer.count * 33}%
+                                            Verifying... {scanBuffer.count * 50}%
                                         </div>
                                     )}
                                 </div>

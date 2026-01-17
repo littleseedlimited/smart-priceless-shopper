@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingBag, Plus, Trash2, Edit3, Save, X, Search, Upload, Camera, XCircle, Package } from 'lucide-react';
+import { ShoppingBag, Search, Plus, Trash2, Edit2, Edit3, X, Upload, Save, CheckCircle, Camera, RefreshCw, ChevronLeft, ChevronRight, Filter, Download, Package, XCircle } from 'lucide-react';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import * as XLSX from 'xlsx';
 
 const AdminInventory = ({ adminUsername }) => {
@@ -60,10 +61,8 @@ const AdminInventory = ({ adminUsername }) => {
         // Wait for modal to render
         setTimeout(async () => {
             try {
-                const Html5Qrcode = window.Html5Qrcode;
-                const Html5QrcodeSupportedFormats = window.Html5QrcodeSupportedFormats;
                 if (!Html5Qrcode || !Html5QrcodeSupportedFormats) {
-                    alert("Scanner library not loaded. Please refresh the page.");
+                    alert("Scanner library initialization failed.");
                     setShowScanner(false);
                     return;
                 }
@@ -77,8 +76,12 @@ const AdminInventory = ({ adminUsername }) => {
                     await html5QrCodeRef.current.start(
                         backCamera.id,
                         {
-                            fps: 15,
-                            qrbox: { width: 250, height: 150 },
+                            fps: 20,
+                            qrbox: { width: 280, height: 180 },
+                            aspectRatio: 1.0,
+                            experimentalFeatures: {
+                                useBarCodeDetectorIfSupported: true
+                            },
                             formatsToSupport: [
                                 Html5QrcodeSupportedFormats.EAN_13,
                                 Html5QrcodeSupportedFormats.EAN_8,

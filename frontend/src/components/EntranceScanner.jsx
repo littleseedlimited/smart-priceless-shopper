@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { Scan, MapPin, X } from 'lucide-react';
 import axios from 'axios';
 
@@ -12,7 +12,12 @@ const EntranceScanner = ({ onOutletDetected }) => {
 
     useEffect(() => {
         const scanner = new Html5Qrcode("entrance-reader");
-        const config = { fps: 20, qrbox: { width: 250, height: 250 } };
+        const config = {
+            fps: 20,
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0,
+            formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE]
+        };
 
         scanner.start(
             { facingMode: "environment" },
