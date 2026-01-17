@@ -4,7 +4,7 @@ services:
     env: node
     plan: free
     buildCommand: "npm run install:all && npm run build:frontend"
-    startCommand: "npm start"
+    startCommand: "npm run start:backend"
     envVars:
       - key: PORT
         value: 5000
