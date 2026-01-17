@@ -453,7 +453,7 @@
         }
 
         let scanCount = {};
-        const SCAN_THRESHOLD = 3; // Require 3 matches for accuracy
+        const SCAN_THRESHOLD = 2; // Require 2 matches for efficiency + accuracy
 
         function onScanSuccess(decodedText) {
             if (isProcessing) return;
@@ -652,8 +652,12 @@
 
         const html5QrCode = new Html5Qrcode("reader");
         const config = {
-            fps: 15,
+            fps: 24,
             qrbox: { width: 280, height: 180 },
+            aspectRatio: 1.0,
+            experimentalFeatures: {
+                useBarCodeDetectorIfSupported: true
+            },
             formatsToSupport: [
                 Html5QrcodeSupportedFormats.EAN_13,
                 Html5QrcodeSupportedFormats.EAN_8,
