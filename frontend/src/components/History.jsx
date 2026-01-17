@@ -25,14 +25,14 @@ const ReceiptModal = ({ order, onClose }) => {
 
                 <div style={{ textAlign: 'center', borderBottom: '2px dashed #eee', paddingBottom: '20px', marginBottom: '20px' }}>
                     <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '900' }}>PRICELESS SHOPPER</h2>
-                    <p style={{ fontSize: '12px', margin: '4px 0', opacity: 0.7 }}>Retail Point of Sale</p>
+                    <p style={{ fontSize: '12px', margin: '4px 0', opacity: 0.7 }}>{order.outletName || 'Retail Point of Sale'}</p>
                     <div style={{ fontSize: '10px', marginTop: '8px' }}>{new Date(order.createdAt).toLocaleString()}</div>
                 </div>
 
                 <div style={{ fontSize: '12px', marginBottom: '20px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                         <span>Order ID:</span>
-                        <span style={{ fontWeight: '700' }}>{order.orderId.split('-')[1]}</span>
+                        <span style={{ fontWeight: '700' }}>{order.orderId.substring(4, 14)}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>Payment:</span>
@@ -139,7 +139,7 @@ const History = ({ user }) => {
                                                     <Receipt size={20} color="var(--brand-blue)" />
                                                 </div>
                                                 <div>
-                                                    <div style={{ fontWeight: '700', fontSize: '14px' }}>#{order.orderId.split('-')[1].slice(-6)}</div>
+                                                    <div style={{ fontWeight: '700', fontSize: '14px' }}>{order.outletName || 'Store Order'}</div>
                                                     <div style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                         <Clock size={10} /> {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </div>

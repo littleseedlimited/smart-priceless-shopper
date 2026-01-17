@@ -1,43 +1,59 @@
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Html5QrcodeScanner } from 'html5-qrcode';
-import { Scan, MapPin } from 'lucide-react';
+import { Html5Qrcode } from 'html5-qrcode';
+import { Scan, MapPin, X } from 'lucide-react';
 import axios from 'axios';
 
 const EntranceScanner = ({ onOutletDetected }) => {
     const navigate = useNavigate();
     const scannerRef = useRef(null);
 
+    const API_BASE = '/api';
+
     useEffect(() => {
-        const scanner = new Html5QrcodeScanner(
-            "entrance-reader",
-            { fps: 10, qrbox: { width: 250, height: 250 } },
-            false
-        );
+        const scanner = new Html5Qrcode("entrance-reader");
+        const config = { fps: 20, qrbox: { width: 250, height: 250 } };
 
-        scanner.render(async (decodedText) => {
-            try {
-                // Assume decodedText is the outlet ID (e.g., 'imo-central')
-                const response = await axios.get(`http://localhost:5000/api/outlets/${decodedText}`);
-                onOutletDetected(response.data);
-                scanner.clear();
+        scanner.start(
+            { facingMode: "environment" },
+            config,
+            async (decodedText) => {
+                try {
+                    // Assume decodedText is the outlet ID (e.g., 'imo-central')
+                    const response = await axios.get(`${API_BASE}/outlets/${decodedText}`);
 
-                const user = localStorage.getItem('shopper_user');
-                if (user) {
-                    navigate('/shop');
-                } else {
-                    navigate('/signup');
+                    // Visual feedback
+                    const feedback = document.createElement('div');
+                    feedback.className = 'scan-success-flash';
+                    document.body.appendChild(feedback);
+                    setTimeout(() => feedback.remove(), 500);
+
+                    onOutletDetected(response.data);
+
+                    if (scanner.isScanning()) {
+                        await scanner.stop();
+                    }
+
+                    const user = localStorage.getItem('shopper_user');
+                    if (user) {
+                        navigate('/shop');
+                    } else {
+                        navigate('/signup');
+                    }
+                } catch (err) {
+                    console.error("Outlet not found", err);
+                    alert("Invalid Store QR Code. Please scan the QR at the entrance.");
                 }
-            } catch (err) {
-                console.error("Outlet not found", err);
-                alert("Invalid Store QR Code. Please scan the QR at the entrance.");
+            },
+            (error) => {
+                // console.warn(error); // Optional: log scan failures
             }
-        }, (error) => {
-            // console.warn(error);
-        });
+        ).catch(err => console.error("Scanner failed to start or encountered an error:", err));
 
         return () => {
-            // Clean up scanner if needed, though scanner.clear() handles most cases
+            if (scanner.isScanning()) {
+                scanner.stop().catch(e => console.error("Error stopping scanner:", e));
+            }
         };
     }, []);
 
@@ -56,7 +72,14 @@ const EntranceScanner = ({ onOutletDetected }) => {
                     </p>
                 </div>
 
-                <div id="entrance-reader" style={{ borderRadius: '16px', overflow: 'hidden' }}></div>
+                <div style={{ position: 'relative' }}>
+                    <div id="entrance-reader" style={{ borderRadius: '24px', overflow: 'hidden', height: '300px' }}></div>
+                    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ width: '250px', height: '250px', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '32px', position: 'relative' }}>
+                            <div className="scanner-laser"></div>
+                        </div>
+                    </div>
+                </div>
 
                 <div style={{ marginTop: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '14px' }}>
                     <MapPin size={16} />

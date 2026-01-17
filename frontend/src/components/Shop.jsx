@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Html5QrcodeScanner } from 'html5-qrcode';
-import { ShoppingCart, Package, Trash2, ChevronRight, X, Search, Bell, Star, Scan } from 'lucide-react';
+import { Html5Qrcode } from 'html5-qrcode';
+import { ShoppingCart, Package, Trash2, ChevronRight, X, Search, Bell, Star, Scan, Camera, Sparkles, RefreshCw } from 'lucide-react';
 import axios from 'axios';
 import BottomNav from './BottomNav';
 
@@ -14,6 +14,10 @@ const Shop = ({ user, outlet }) => {
         { barcode: '123456', name: 'Nestlé Milo 500g', price: 2500, image: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&q=80&w=200', category: 'Beverage', rating: 4.8 },
         { barcode: '234567', name: 'Peak Full Cream Milk', price: 1800, image: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&q=80&w=200', category: 'Dairy', rating: 4.9 },
     ]);
+
+    const [scanBuffer, setScanBuffer] = useState({ code: '', count: 0 });
+    const [isIdentifying, setIsIdentifying] = useState(false);
+    const API_BASE = '/api';
 
     useEffect(() => {
         if (!outlet) navigate('/');
@@ -30,19 +34,85 @@ const Shop = ({ user, outlet }) => {
     useEffect(() => {
         let scanner;
         if (scannerActive) {
-            scanner = new Html5QrcodeScanner("item-reader", { fps: 15, qrbox: 250 }, false);
-            scanner.render(async (decodedText) => {
-                try {
-                    const response = await axios.get(`http://localhost:5000/api/products/${decodedText}`);
-                    addToCart(response.data);
-                    setScannerActive(false);
-                } catch (err) {
-                    alert("Item not found in store database.");
+            scanner = new Html5Qrcode("item-reader");
+            const config = { fps: 24, qrbox: { width: 280, height: 280 } };
+
+            scanner.start(
+                { facingMode: "environment" },
+                config,
+                (decodedText) => {
+                    // Consensus Logic: Verify 3 times for 100% accuracy
+                    setScanBuffer(prev => {
+                        if (prev.code === decodedText) {
+                            if (prev.count + 1 >= 3) {
+                                handleConfirmScan(decodedText);
+                                return { code: '', count: 0 };
+                            }
+                            return { ...prev, count: prev.count + 1 };
+                        }
+                        return { code: decodedText, count: 1 };
+                    });
                 }
-            });
+            ).catch(err => console.error("Scanner initialization failed", err));
         }
-        return () => scanner?.clear().catch(() => { });
+        return () => {
+            if (scanner) {
+                if (scanner.isScanning) {
+                    scanner.stop().then(() => scanner.clear()).catch(e => console.error(e));
+                }
+            }
+        };
     }, [scannerActive]);
+
+    const handleConfirmScan = async (code) => {
+        try {
+            const response = await axios.get(`${API_BASE}/products/${code}`);
+            if (response.data) {
+                addToCart(response.data);
+                // Visual feedback
+                const feedback = document.createElement('div');
+                feedback.className = 'scan-success-flash';
+                document.body.appendChild(feedback);
+                setTimeout(() => feedback.remove(), 500);
+
+                setScannerActive(false);
+                setScanBuffer({ code: '', count: 0 });
+            }
+        } catch (err) {
+            console.warn("Item not found by barcode:", code);
+        }
+    };
+
+    const handleAIIdentify = async () => {
+        setIsIdentifying(true);
+        try {
+            const video = document.querySelector('#item-reader video');
+            if (!video) throw new Error("Video stream not found");
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            const imageData = canvas.toDataURL('image/jpeg', 0.8);
+
+            const res = await axios.post(`${API_BASE}/vision/identify`, { image: imageData });
+
+            if (res.data.products && res.data.products.length > 0) {
+                const product = res.data.products[0];
+                addToCart(product);
+                alert(`AI Identified: ${product.name}`);
+                setScannerActive(false);
+            } else {
+                alert("AI couldn't identify the product. Try a clearer angle.");
+            }
+        } catch (err) {
+            console.error("AI Identity Error:", err);
+            alert("AI service unavailable.");
+        } finally {
+            setIsIdentifying(false);
+        }
+    };
 
     const addToCart = (product) => {
         setCart(prev => {
@@ -90,16 +160,54 @@ const Shop = ({ user, outlet }) => {
 
             <main style={{ padding: '0 24px 100px', flex: 1 }}>
                 {scannerActive && (
-                    <div className="animate-slide-up" style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'var(--background)' }}>
-                        <div className="header">
-                            <div className="logo">SCANNER</div>
-                            <button onClick={() => setScannerActive(false)} style={{ background: 'var(--surface)', border: 'none', padding: '10px', borderRadius: '50%', color: 'white' }}>
+                    <div className="animate-fade-in" style={{ position: 'fixed', inset: 0, zIndex: 2000, background: '#000' }}>
+                        <div className="header" style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)' }}>
+                            <div className="logo" style={{ color: 'white' }}>SMART SCANNER</div>
+                            <button onClick={() => setScannerActive(false)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', padding: '10px', borderRadius: '50%', color: 'white' }}>
                                 <X size={24} />
                             </button>
                         </div>
-                        <div style={{ padding: '24px' }}>
-                            <div id="item-reader" style={{ borderRadius: '32px', overflow: 'hidden', boxShadow: '0 0 40px rgba(99, 102, 241, 0.3)' }}></div>
-                            <p style={{ textAlign: 'center', marginTop: '24px', color: 'var(--text-secondary)' }}>Align barcode/QR code within the frame</p>
+
+                        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative' }}>
+                            <div id="item-reader" style={{ width: '100%', height: '100%', objectFit: 'cover' }}></div>
+
+                            {/* Overlay Scanner UI */}
+                            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <div style={{
+                                    width: '280px', height: '280px', border: '2px solid rgba(255,255,255,0.3)', borderRadius: '40px',
+                                    position: 'relative', overflow: 'hidden'
+                                }}>
+                                    <div className="scanner-laser"></div>
+                                    {scanBuffer.count > 0 && (
+                                        <div style={{
+                                            position: 'absolute', bottom: '20px', left: '0', right: '0', textAlign: 'center',
+                                            color: 'var(--primary)', fontWeight: 'bold', textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+                                        }}>
+                                            Verifying... {scanBuffer.count * 33}%
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div style={{ position: 'absolute', bottom: '40px', left: '0', right: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '0 40px' }}>
+                                <div style={{ display: 'flex', gap: '16px' }}>
+                                    <button
+                                        onClick={handleAIIdentify}
+                                        disabled={isIdentifying}
+                                        style={{
+                                            background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.2)',
+                                            color: 'white', padding: '12px 24px', borderRadius: '16px', fontWeight: 'bold',
+                                            display: 'flex', alignItems: 'center', gap: '10px'
+                                        }}
+                                    >
+                                        {isIdentifying ? <RefreshCw size={20} className="animate-spin" /> : <Sparkles size={20} color="var(--accent)" />}
+                                        {isIdentifying ? 'IDENTIFYING...' : 'AI IDENTIFY'}
+                                    </button>
+                                </div>
+                                <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px', textAlign: 'center' }}>
+                                    Point at barcode or use AI if barcode is damaged
+                                </p>
+                            </div>
                         </div>
                     </div>
                 )}

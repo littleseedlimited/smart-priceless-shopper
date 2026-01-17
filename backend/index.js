@@ -581,6 +581,9 @@ app.post('/api/checkout', (req, res) => {
   const amount = parseFloat(totalAmount);
 
   // 1. Handle Wallet Payment
+  const outlet = db.outlets?.find(o => o.id === outletId);
+  const outletName = outlet ? outlet.name : 'Priceless Store';
+
   if (paymentMethod === 'Priceless Wallet') {
     const user = db.users.find(u => String(u.userId) === String(userId));
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -595,7 +598,7 @@ app.post('/api/checkout', (req, res) => {
       id: `TXN-${Date.now()}`,
       type: 'DEBIT',
       amount,
-      purpose: `Order at ${outletId || 'Priceless Store'}`,
+      purpose: `Order at ${outletName}`,
       date: new Date()
     });
   }
@@ -606,6 +609,7 @@ app.post('/api/checkout', (req, res) => {
     orderId,
     userId,
     outletId,
+    outletName,
     items, // [{barcode, name, price, quantity}]
     total: amount,
     paymentMethod,

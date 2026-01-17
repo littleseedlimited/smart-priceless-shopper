@@ -301,6 +301,59 @@ body {
   }
 }
 
+/* Scanner Animations */
+@keyframes laserMove {
+  0% {
+    top: 0;
+  }
+
+  50% {
+    top: 100%;
+  }
+
+  100% {
+    top: 0;
+  }
+}
+
+.scanner-laser {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: rgba(227, 30, 36, 0.8);
+  box-shadow: 0 0 15px 2px rgba(227, 30, 36, 0.8);
+  animation: laserMove 2s infinite linear;
+  z-index: 5;
+}
+
+@keyframes successFlash {
+  0% {
+    background: rgba(34, 197, 94, 0);
+  }
+
+  50% {
+    background: rgba(34, 197, 94, 0.3);
+  }
+
+  100% {
+    background: rgba(34, 197, 94, 0);
+  }
+}
+
+.scan-success-flash {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3000;
+  animation: successFlash 0.5s ease-out forwards;
+}
+
+.animate-spin {
+  animation: spin-slow 1s linear infinite;
+}
+
 /* Admin Dashboard Responsive Styles */
 .admin-layout {
   display: flex;
