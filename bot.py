@@ -646,11 +646,15 @@ if __name__ == '__main__':
             return # Quiet logs
 
     def run_health_check():
-        port = int(os.environ.get("PORT", 8080))
-        server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
-        print(f"Health check server running on port {port}")
-        server.serve_forever()
+        try:
+            port = int(os.environ.get("PORT", 8080))
+            server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
+            print(f"Health check server running on port {port}")
+            server.serve_forever()
+        except Exception as e:
+            print(f"Health check server failed to start (likely port already bound): {e}")
 
     threading.Thread(target=run_health_check, daemon=True).start()
     
+    print("Bot is starting polling...")
     application.run_polling()
