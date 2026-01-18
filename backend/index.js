@@ -105,7 +105,11 @@ const checkRole = (allowedRoles) => (req, res, next) => {
 
 // Health Check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Smart Priceless Shopper API is running' });
+  res.json({ status: 'OK', message: 'Smart Priceless Shopper API is running (v4)' });
+});
+
+app.get('/api/ping', (req, res) => {
+  res.send('pong');
 });
 
 // --- Product Endpoints ---
