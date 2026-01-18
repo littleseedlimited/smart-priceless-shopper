@@ -39,19 +39,38 @@ logging.basicConfig(
 
 # --- Helpers ---
 
+def smart_request(method, endpoint, **kwargs):
+    """
+    Tries internal localhost first (fastest for Render), 
+    then falls back to the public API_BASE.
+    """
+    # 1. Try Localhost
+    local_url = f"http://localhost:5000/api{endpoint}"
+    try:
+        res = requests.request(method, local_url, timeout=3, **kwargs)
+        if res.status_code < 500: return res
+    except:
+        pass
+
+    # 2. Try Public URL
+    public_url = f"{API_URL}{endpoint}" 
+    try:
+        return requests.request(method, public_url, timeout=10, **kwargs)
+    except Exception as e:
+        logging.error(f"Network Error for {endpoint}: {e}")
+        raise e
+
 async def is_authenticated(user_id):
     try:
-        res = requests.get(f"{API_URL}/users/check/{user_id}", timeout=10).json()
+        res = smart_request("GET", f"/users/check/{user_id}").json()
         return res.get('registered') and res.get('loggedIn')
-    except Exception as e:
-        logging.error(f"Auth Check Error for {user_id}: {e}")
+    except:
         return False
 
 async def get_user_status(user_id):
     try:
-        return requests.get(f"{API_URL}/users/check/{user_id}", timeout=10).json()
-    except Exception as e:
-        logging.error(f"User Status Error for {user_id}: {e}")
+        return smart_request("GET", f"/users/check/{user_id}").json()
+    except:
         return {"registered": False}
 
 def get_recommendations(current_product, all_products):
@@ -127,7 +146,7 @@ async def reg_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
     
     try:
-        res = requests.post(f"{API_URL}/users/register", json=payload).json()
+        res = smart_request("POST", "/users/register", json=payload).json()
         code = res.get('loginCode')
         
         await update.message.reply_text(
@@ -152,7 +171,7 @@ async def handle_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     
     try:
-        res = requests.post(f"{API_URL}/users/login", json={"userId": user_id, "code": code}, timeout=10)
+        res = smart_request("POST", "/users/login", json={"userId": user_id, "code": code})
         if res.status_code == 200:
             data = res.json()
             await update.message.reply_text(
@@ -188,11 +207,11 @@ async def process_barcode_logic(barcode, update, context):
             await update.message.reply_text("🌐 Website link detected. Please scan product barcode! 🛍️", parse_mode='Markdown')
             return
 
-        response = requests.get(f"{API_URL}/products/{barcode}")
+        response = smart_request("GET", f"/products/{barcode}")
         if response.status_code == 200:
             product = response.json()
             all_products = []
-            try: all_products = requests.get(f"{API_URL}/products/all").json()
+            try: all_products = smart_request("GET", "/products/all").json()
             except: pass
             
             recommendations = get_recommendations(product, all_products)
@@ -434,7 +453,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         try:
             # Fetch cart items
-            cart_res = requests.get(f"{API_URL}/cart/{user_id}")
+            cart_res = smart_request("GET", f"/cart/{user_id}")
             cart_data = cart_res.json()
             
             if not cart_data or not cart_data.get('items'):
@@ -450,7 +469,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "paymentRef": ref_code
             }
             
-            requests.post(f"{API_URL}/orders", json=order_data)
+            smart_request("POST", "/orders", json=order_data)
 
             msg = (
                 "✅ *PAYMENT CONFIRMED & ORDER PLACED*\n\n"
@@ -468,12 +487,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     elif data == 'clear_cart':
         user_id = query.from_user.id
-        requests.post(f"{API_URL}/cart/clear", json={"userId": user_id})
+        smart_request("POST", "/cart/clear", json={"userId": user_id})
         await query.edit_message_text("🗑️ Cart cleared!")
     
     elif data == 'admin_stats':
         try:
-            res = requests.get(f"{API_URL}/admin/stats", headers={'x-admin-username': 'origichidiah'}).json()
+            res = smart_request("GET", "/admin/stats", headers={'x-admin-username': 'origichidiah'}).json()
             msg = (
                 "📊 *REAL-TIME ANALYTICS*\n\n"
                 f"💰 Total Sales: ₦{res['totalSales']:,}\n"
@@ -571,8 +590,8 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         # Send to backend
-        res = requests.post(
-            f"{API_URL}/admin/products/bulk", 
+        res = smart_request("POST", 
+            "/admin/products/bulk", 
             json=final_products,
             headers={'x-admin-username': 'origichidiah'}
         )
@@ -596,7 +615,7 @@ async def staff_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     try:
         # Check backend for staff role
-        res = requests.get(f"{API_URL}/admin/staff", headers={'x-admin-username': 'origichidiah'}) # Using super admin to fetch list
+        res = smart_request("GET", "/admin/staff", headers={'x-admin-username': 'origichidiah'}) # Using super admin to fetch list
         staff_list = res.json()
         is_staff = any(s['username'] == user.username for s in staff_list) or user.username == 'origichidiah'
         
