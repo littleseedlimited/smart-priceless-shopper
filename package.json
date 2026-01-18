@@ -5,9 +5,12 @@
     "scripts": {
         "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
         "build:frontend": "cd frontend && npm install --include=dev && npm run build",
-        "start": "python3 bot.py & cd backend && node index.js",
+        "start": "concurrently \"python3 bot.py\" \"cd backend && node index.js\"",
         "start:backend": "cd backend && node index.js",
         "start:bot": "python3 bot.py",
         "deploy": "npm run install:all && npm run build:frontend && npm start"
+    },
+    "dependencies": {
+        "concurrently": "^8.2.2"
     }
 }

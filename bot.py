@@ -612,49 +612,38 @@ async def staff_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # --- Main ---
 
 if __name__ == '__main__':
-    application = ApplicationBuilder().token(TOKEN).build()
-    
-    # Registration Handler
-    reg_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
-        states={
-            REG_NAME: [MessageHandler(filters.TEXT & ~(filters.COMMAND), reg_name)],
-            REG_PHONE: [MessageHandler(filters.TEXT & ~(filters.COMMAND), reg_phone)],
-            REG_EMAIL: [MessageHandler(filters.TEXT & ~(filters.COMMAND), reg_email)],
-            LOGIN_CODE: [MessageHandler(filters.Regex(r'^\d{6}$'), handle_login)]
-        },
-        fallbacks=[CommandHandler('start', start)]
-    )
-    
-    application.add_handler(reg_handler)
-    application.add_handler(CommandHandler('admin', admin_menu))
-    application.add_handler(CommandHandler('staff', staff_menu))
-    application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
-    application.add_handler(CallbackQueryHandler(button_handler))
-    application.add_handler(MessageHandler(filters.Document.ALL, handle_document))
-    application.add_handler(MessageHandler(filters.TEXT & ~(filters.COMMAND), handle_text_messages))
-    
-    print("Priceless Secure Bot is LIVE")
-    
-    # Health check server for Railway/Render
-    class HealthCheckHandler(BaseHTTPRequestHandler):
-        def do_GET(self):
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write(b"OK")
-        def log_message(self, format, *args):
-            return # Quiet logs
-
-    def run_health_check():
-        try:
-            port = int(os.environ.get("PORT", 8080))
-            server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
-            print(f"Health check server running on port {port}")
-            server.serve_forever()
-        except Exception as e:
-            print(f"Health check server failed to start (likely port already bound): {e}")
-
-    threading.Thread(target=run_health_check, daemon=True).start()
-    
-    print("Bot is starting polling...")
-    application.run_polling()
+    try:
+        application = ApplicationBuilder().token(TOKEN).build()
+        
+        # Registration Handler
+        reg_handler = ConversationHandler(
+            entry_points=[CommandHandler('start', start)],
+            states={
+                REG_NAME: [MessageHandler(filters.TEXT & ~(filters.COMMAND), reg_name)],
+                REG_PHONE: [MessageHandler(filters.TEXT & ~(filters.COMMAND), reg_phone)],
+                REG_EMAIL: [MessageHandler(filters.TEXT & ~(filters.COMMAND), reg_email)],
+                LOGIN_CODE: [MessageHandler(filters.Regex(r'^\d{6}$'), handle_login)]
+            },
+            fallbacks=[CommandHandler('start', start)]
+        )
+        
+        application.add_handler(reg_handler)
+        application.add_handler(CommandHandler('admin', admin_menu))
+        application.add_handler(CommandHandler('staff', staff_menu))
+        application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
+        application.add_handler(CallbackQueryHandler(button_handler))
+        application.add_handler(MessageHandler(filters.Document.ALL, handle_document))
+        application.add_handler(MessageHandler(filters.TEXT & ~(filters.COMMAND), handle_text_messages))
+        
+        print("Priceless Secure Bot is LIVE and preparing to start polling...")
+        
+        # ⏱️ Slight delay to ensure the backend web server has bound to the port first
+        print("Waiting 10 seconds for backend initialization...")
+        time.sleep(10)
+        
+        print("Bot is starting polling now.")
+        application.run_polling()
+    except Exception as e:
+        print(f"CRITICAL BOT ERROR: {e}")
+        # Keep process alive so Render doesn't loop forever, but logged error is clear
+        time.sleep(3600)
