@@ -1,6 +1,20 @@
 import logging
 import os
-import requests
+import sys
+
+# 🔍 STARTUP DEBUGGING (For Render)
+print(f"--- BOT SYSTEM DEBUG ---")
+print(f"Python Executable: {sys.executable}")
+print(f"Python Version: {sys.version}")
+print(f"System Path: {sys.path}")
+print(f"Environment PATH: {os.environ.get('PATH')}")
+print(f"------------------------")
+
+try:
+    import requests
+    print("SUCCESS: 'requests' is available.")
+except Exception as e:
+    print(f"CRITICAL: 'requests' import failed - {e}")
 # import cv2
 # import numpy as np
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, constants
