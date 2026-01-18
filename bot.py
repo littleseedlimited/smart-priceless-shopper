@@ -1,15 +1,15 @@
 import logging
 import os
 import requests
-import cv2
-import numpy as np
+# import cv2
+# import numpy as np
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, constants
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, 
     filters, CallbackQueryHandler, ConversationHandler
 )
 from dotenv import load_dotenv
-import pandas as pd
+# import pandas as pd
 import io
 import json
 import time
@@ -549,71 +549,7 @@ async def admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if user.username != 'origichidiah': return
-
-    doc = update.message.document
-    file_name = doc.file_name.lower()
-    
-    status_msg = await update.message.reply_text("⏳ *Processing inventory file...*", parse_mode='Markdown')
-    
-    try:
-        new_file = await context.bot.get_file(doc.file_id)
-        file_bytes = await new_file.download_as_bytearray()
-        
-        products = []
-        
-        if file_name.endswith('.csv'):
-            df = pd.read_csv(io.BytesIO(file_bytes))
-            products = df.to_dict('records')
-        elif file_name.endswith('.xlsx'):
-            df = pd.read_excel(io.BytesIO(file_bytes))
-            products = df.to_dict('records')
-        elif file_name.endswith('.json'):
-            products = json.loads(file_bytes.decode('utf-8'))
-        else:
-            await status_msg.edit_text("❌ *Unsupported format:* Please send CSV, XLSX, or JSON.")
-            return
-
-        # Simple validation & mapping
-        final_products = []
-        for p in products:
-            # Map column names if they are slightly different
-            barcode = str(p.get('barcode', p.get('Barcode', '')))
-            name = p.get('name', p.get('Name', ''))
-            price = p.get('price', p.get('Price', 0))
-            if barcode and name:
-                final_products.append({
-                    "barcode": barcode,
-                    "name": name,
-                    "price": int(price),
-                    "category": p.get('category', p.get('Category', 'Other')),
-                    "description": p.get('description', p.get('Description', ''))
-                })
-
-        if not final_products:
-            await status_msg.edit_text("❌ *Empty or invalid data:* Check barcode/name/price columns.")
-            return
-
-        # Send to backend
-        res = smart_request("POST", 
-            "/admin/products/bulk", 
-            json=final_products,
-            headers={'x-admin-username': 'origichidiah'}
-        )
-        
-        if res.status_code == 200:
-            count = res.json()
-            await status_msg.edit_text(
-                f"✅ *Bulk Upload Success!*\n\n"
-                f"🆕 Added: {count.get('added', 0)}\n"
-                f"🔄 Updated: {count.get('updated', 0)}\n"
-                f"📦 Total Processed: {len(final_products)}",
-                parse_mode='Markdown'
-            )
-        else:
-            await status_msg.edit_text(f"⚠️ *Backend Error:* {res.text}")
-
-    except Exception as e:
-        await status_msg.edit_text(f"❌ *Error:* {str(e)}")
+    await update.message.reply_text("📦 *Bulk Upload:* Temporarily disabled for performance optimization. Please use the web dashboard.")
 
 async def staff_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
