@@ -1,7 +1,7 @@
 services:
   - type: web
     name: smart-priceless-shopper
-    runtime: nixpacks
+    env: nixpacks
     plan: free
     buildCommand: "npm run install:all && npm run build:frontend"
     startCommand: "npm start"
