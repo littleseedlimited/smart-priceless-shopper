@@ -103,7 +103,7 @@ const AdminInventory = ({ adminUsername }) => {
                 }
             } catch (err) {
                 console.error("Scanner error:", err);
-                alert("Camera error: " + err.message);
+                alert("Camera error: " + (err.message || err.name || "Please allow camera access"));
                 setShowScanner(false);
             }
         }, 100);
@@ -286,6 +286,7 @@ const AdminInventory = ({ adminUsername }) => {
                 if (videoRef.current) videoRef.current.srcObject = stream;
             } catch (err) {
                 console.error("Camera error:", err);
+                alert("Camera error: " + (err.message || err.name || "Please allow camera access"));
                 setShowCamera(false);
             }
         }, 100);
