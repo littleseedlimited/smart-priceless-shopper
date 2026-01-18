@@ -43,7 +43,7 @@ function spawnBot() {
         const cmd = cmds[index];
         log(`Attempting to spawn bot with: ${cmd}...`);
 
-        const p = spawn(cmd, ['bot.py'], {
+        const p = spawn(cmd, ['-u', 'bot.py'], {
             cwd: __dirname,
             stdio: ['ignore', 'pipe', 'pipe'],
             env: process.env
