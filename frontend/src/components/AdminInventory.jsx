@@ -487,13 +487,12 @@ const AdminInventory = ({ adminUsername }) => {
                                                     <Camera size={16} />
                                                 </button>
                                             </div>
-                                            <input type="text" className="input-field" placeholder="Product Name (AI will fill this)" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} />
+                                            <input type="text" className="input-field" placeholder="Product Name" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} />
                                             <div style={{ display: 'flex', gap: '8px' }}>
                                                 <input type="number" className="input-field" placeholder="Price (₦)" value={editForm.price} onChange={e => setEditForm({ ...editForm, price: e.target.value })} style={{ flex: 1 }} />
                                                 <input type="text" className="input-field" placeholder="Category" value={editForm.category} onChange={e => setEditForm({ ...editForm, category: e.target.value })} style={{ flex: 1 }} />
                                             </div>
-                                            <textarea className="input-field" placeholder="Description (extracted by AI)" value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} style={{ minHeight: '60px', padding: '10px' }} />
-                                            {isAnalyzing && <div style={{ fontSize: '11px', color: 'var(--brand-blue)', fontWeight: 'bold', animation: 'pulse 1.5s infinite' }}>🤖 AI RECOGNIZING PRODUCT & FILLING FORM...</div>}
+                                            <textarea className="input-field" placeholder="Description" value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} style={{ minHeight: '60px', padding: '10px' }} />
                                         </div>
                                     </td>
                                     <td style={{ padding: '16px 20px', textAlign: 'right', verticalAlign: 'top' }}>
