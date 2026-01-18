@@ -257,11 +257,19 @@ const AdminInventory = ({ adminUsername }) => {
             { barcode: '123456789', name: 'Sample Product', price: 1000, category: 'General', description: 'Sample description' }
         ];
         const worksheet = XLSX.utils.json_to_sheet(templateData);
-        // The original code had `reader.readAsDataURL(file);` here, which is incorrect.
-        // Assuming the intent was to create and download an Excel file.
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Products");
         XLSX.writeFile(workbook, "product_template.xlsx");
+    };
+
+    const handleExportDB = () => {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(products, null, 2));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", "db_export.json");
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
     };
 
     const handleAddClick = (mode) => {
@@ -358,8 +366,11 @@ const AdminInventory = ({ adminUsername }) => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '15px' }}>
                 <h2 className="section-title" style={{ margin: 0 }}>Inventory Management</h2>
                 <div style={{ display: 'flex', gap: '10px', position: 'relative' }}>
+                    <button className="btn btn-secondary" style={{ width: 'auto', padding: '10px 20px' }} onClick={handleExportDB}>
+                        <Download size={18} /> Export DB
+                    </button>
                     <button className="btn btn-secondary" style={{ width: 'auto', padding: '10px 20px' }} onClick={handleDownloadTemplate}>
-                        <ShoppingBag size={18} /> Download Template
+                        <ShoppingBag size={18} /> Template
                     </button>
 
                     <button className="btn btn-primary" style={{ width: 'auto', padding: '10px 20px' }} onClick={(e) => { e.stopPropagation(); setShowAddMenu(!showAddMenu); }}>
