@@ -9,7 +9,8 @@ const PORT = process.env.PORT || 5000;
 const DB_FILE = process.env.DB_PATH || path.join(__dirname, 'db.json');
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 // Serve dist for React App
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
 // Serve specific static files needed by bot
@@ -656,8 +657,21 @@ app.get('/api/transactions/:userId', (req, res) => {
 });
 
 // --- Catch-all to serve React App for client-side routing ---
-app.use((req, res) => {
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    return res.status(404).json({ error: 'API Endpoint not found' });
+  }
   res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+});
+
+// --- Global Error Handler ---
+app.use((err, req, res, next) => {
+  console.error(`[Server Error] ${err.stack}`);
+  const status = err.status || 500;
+  res.status(status).json({
+    error: err.message || 'Internal Server Error',
+    code: err.code || 'UNKNOWN_ERROR'
+  });
 });
 
 app.listen(PORT, () => {

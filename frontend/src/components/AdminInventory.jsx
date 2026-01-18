@@ -219,8 +219,15 @@ const AdminInventory = ({ adminUsername }) => {
                 setEditForm({});
                 alert(isAdding ? "Product added successfully!" : "Product updated!");
             } else {
-                const err = await res.json();
-                alert(err.error || "Failed to save product");
+                const contentType = res.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    const err = await res.json();
+                    alert(err.error || "Failed to save product");
+                } else {
+                    const text = await res.text();
+                    console.error("Non-JSON Error Response:", text);
+                    alert(`Server Error (${res.status}): Please check the console or ensure your image size is valid.`);
+                }
             }
         } catch (e) {
             console.error("Save Error:", e);
