@@ -656,6 +656,16 @@ app.get('/api/transactions/:userId', (req, res) => {
   res.json(db.transactions.filter(t => t.userId == req.params.userId));
 });
 
+// 🐛 Debug endpoint to read bot logs on Render
+app.get('/api/debug/bot-logs', (req, res) => {
+  const logPath = path.join(__dirname, '../bot.log');
+  if (fs.existsSync(logPath)) {
+    res.sendFile(logPath);
+  } else {
+    res.status(404).send('bot.log not found yet.');
+  }
+});
+
 // --- Catch-all to serve React App for client-side routing ---
 app.use((req, res, next) => {
   if (req.path.startsWith('/api')) {

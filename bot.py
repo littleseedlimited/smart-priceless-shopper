@@ -34,7 +34,11 @@ REG_NAME, REG_PHONE, REG_EMAIL, LOGIN_CODE = range(4)
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
+    level=logging.INFO,
+    handlers=[
+        logging.FileHandler("bot.log"),
+        logging.StreamHandler()
+    ]
 )
 
 # --- Helpers ---
@@ -640,7 +644,16 @@ async def staff_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # --- Main ---
 
+def log_info(msg):
+    logging.info(msg)
+    print(msg)
+
 if __name__ == '__main__':
+    log_info("--- Bot Process Started ---")
+    masked_token = f"{TOKEN[:5]}...{TOKEN[-5:]}" if TOKEN else "None"
+    log_info(f"Using Token: {masked_token}")
+    log_info(f"API_BASE: {API_BASE}")
+    
     try:
         application = ApplicationBuilder().token(TOKEN).build()
         
