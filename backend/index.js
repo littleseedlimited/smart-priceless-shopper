@@ -105,7 +105,12 @@ const checkRole = (allowedRoles) => (req, res, next) => {
 
 // Health Check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Smart Priceless Shopper API is running (v4)' });
+  res.json({
+    status: 'OK',
+    message: 'Smart Priceless Shopper API is running (v4)',
+    pid: process.pid,
+    uptime: process.uptime()
+  });
 });
 
 app.get('/api/ping', (req, res) => {
@@ -658,6 +663,10 @@ app.post('/api/checkout', (req, res) => {
 
 app.get('/api/transactions/:userId', (req, res) => {
   res.json(db.transactions.filter(t => t.userId == req.params.userId));
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', pid: process.pid, timestamp: new Date() });
 });
 
 // 🐛 Debug endpoint to read bot logs on Render

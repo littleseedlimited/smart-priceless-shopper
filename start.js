@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 
 const logPath = path.join(__dirname, 'bot.log');
-const logStream = fs.createWriteStream(logPath, { flags: 'a' });
+const logStream = fs.createWriteStream(logPath, { flags: 'w' });
 
 function log(msg) {
     const text = `[Unified Start] ${new Date().toISOString()} - ${msg}\n`;
