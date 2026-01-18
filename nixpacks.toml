@@ -1,10 +1,17 @@
 [phases.setup]
-nixPkgs = ["nodejs", "python311", "gcc", "libGL", "libglvnd"]
+nixPkgs = [
+    "nodejs", 
+    "python311", 
+    "python311Packages.pip",
+    "python311Packages.requests",
+    "python311Packages.python-telegram-bot",
+    "python311Packages.python-dotenv",
+    "gcc"
+]
 
 [phases.install]
 cmds = [
-    "npm run install:all",
-    "python3 -m pip install -r requirements.txt"
+    "npm run install:all"
 ]
 
 [phases.build]
