@@ -7,8 +7,16 @@ const logStream = fs.createWriteStream(logPath, { flags: 'w' });
 
 function log(msg) {
     const text = `[Unified Start] ${new Date().toISOString()} - ${msg}\n`;
-    console.log(text);
     logStream.write(text);
+    process.stdout.write(text);
+}
+
+log("Listing directory contents for debugging...");
+try {
+    const files = fs.readdirSync(__dirname);
+    log(`Contents of ${__dirname}: ${files.join(', ')}`);
+} catch (e) {
+    log(`Error listing dir: ${e.message}`);
 }
 
 log("--- Starting Unified Service (Backend + Bot) ---");
