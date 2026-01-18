@@ -34,39 +34,54 @@ backend.on('exit', (code) => {
 log("Spawning Bot (Python)...");
 let bot;
 
-function spawnBot(cmd) {
-    const p = spawn(cmd, ['bot.py'], {
-        cwd: __dirname,
-        stdio: ['ignore', 'pipe', 'pipe'],
-        env: process.env
-    });
+function spawnBot() {
+    // Try .venv first (Render/Nixpacks), then python3, then python
+    const cmds = ['./.venv/bin/python', 'python3', 'python'];
+    let currentCmdIndex = 0;
 
-    p.stdout.on('data', (data) => {
-        logStream.write(data);
-        process.stdout.write(data);
-    });
+    function trySpawn(index) {
+        const cmd = cmds[index];
+        log(`Attempting to spawn bot with: ${cmd}...`);
 
-    p.stderr.on('data', (data) => {
-        logStream.write(data);
-        process.stderr.write(data);
-    });
+        const p = spawn(cmd, ['bot.py'], {
+            cwd: __dirname,
+            stdio: ['ignore', 'pipe', 'pipe'],
+            env: process.env
+        });
 
-    p.on('error', (err) => {
-        if (err.code === 'ENOENT' && cmd === 'python3') {
-            log("python3 not found, falling back to 'python'...");
-            bot = spawnBot('python');
-        } else {
-            log(`BOT ERROR (${cmd}): ${err.message}`);
-        }
-    });
+        p.stdout.on('data', (data) => {
+            logStream.write(data);
+            process.stdout.write(data);
+        });
 
-    p.on('exit', (code) => {
-        log(`Bot process (${cmd}) exited with code ${code}`);
-    });
+        p.stderr.on('data', (data) => {
+            logStream.write(data);
+            process.stderr.write(data);
+        });
 
-    return p;
+        p.on('error', (err) => {
+            if (err.code === 'ENOENT' && index < cmds.length - 1) {
+                log(`${cmd} not found, trying ${cmds[index + 1]}...`);
+                // Note: trySpawn will be called after this error if we structure it right
+            } else {
+                log(`BOT CRITICAL ERROR (${cmd}): ${err.message}`);
+            }
+        });
+
+        p.on('exit', (code) => {
+            log(`Bot process (${cmd}) exited with code ${code}`);
+            if (code !== 0 && index < cmds.length - 1) {
+                log(`Retrying with next command: ${cmds[index + 1]}...`);
+                trySpawn(index + 1);
+            }
+        });
+
+        return p;
+    }
+
+    return trySpawn(0);
 }
 
-bot = spawnBot('python3');
+bot = spawnBot();
 
 log("Both processes initiated. Monitoring...");

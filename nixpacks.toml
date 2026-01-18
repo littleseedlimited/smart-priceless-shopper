@@ -1,17 +1,11 @@
 [phases.setup]
-nixPkgs = [
-    "nodejs", 
-    "python311", 
-    "python311Packages.pip",
-    "python311Packages.requests",
-    "python311Packages.python-telegram-bot",
-    "python311Packages.python-dotenv",
-    "gcc"
-]
+nixPkgs = ["nodejs", "python311", "gcc"]
 
 [phases.install]
 cmds = [
-    "npm run install:all"
+    "npm run install:all",
+    "python3 -m venv .venv",
+    ".venv/bin/pip install requests python-telegram-bot python-dotenv"
 ]
 
 [phases.build]
