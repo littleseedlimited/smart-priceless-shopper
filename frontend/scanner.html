@@ -439,29 +439,15 @@
         }
 
         let scanCount = {};
-        const SCAN_THRESHOLD = 2; // Require 2 matches for efficiency + accuracy
 
         function onScanSuccess(decodedText) {
             if (isProcessing) return;
 
-            // Accuracy Logic: Require 3 consecutive identical scans
-            if (!scanCount[decodedText]) {
-                scanCount = {}; // Reset others
-                scanCount[decodedText] = 1;
-                document.getElementById('status').innerText = `SCANNING... (${scanCount[decodedText]}/${SCAN_THRESHOLD})`;
-                return;
-            } else {
-                scanCount[decodedText]++;
-                document.getElementById('status').innerText = `VERIFYING... (${scanCount[decodedText]}/${SCAN_THRESHOLD})`;
-                if (scanCount[decodedText] < SCAN_THRESHOLD) return;
-            }
-
-            // Consensus reached
+            // Process immediately for instant responsiveness
             isProcessing = true;
             scanCount = {}; // Reset for next scan
 
             document.getElementById('status').innerText = "SEARCHING DATABASE...";
-            // ... rest of search logic ...
             fetch(`/api/products/${decodedText}`)
                 .then(res => {
                     if (res.status === 404) throw new Error("NOT_FOUND");
