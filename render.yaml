@@ -3,7 +3,7 @@ services:
     name: smart-priceless-shopper
     env: nixpacks
     plan: free
-    buildCommand: "npm run install:all && npm run build:frontend"
+    buildCommand: "npm run install:all && npm run build:frontend && python3 -m pip install -r requirements.txt"
     startCommand: "npm start"
     envVars:
       - key: PORT
