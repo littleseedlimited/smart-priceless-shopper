@@ -79,6 +79,15 @@
       "category": "Provision ",
       "description": "",
       "createdAt": "2026-01-15T18:24:49.565Z"
+    },
+    {
+      "barcode": "4005900736109",
+      "name": "Nivea Men Anti-perspirant Anti-transpirant 200ml",
+      "price": 3500,
+      "category": "Cosmetics",
+      "description": "Black and White invinsible",
+      "images": [],
+      "createdAt": "2026-01-18T23:02:15.134Z"
     }
   ],
   "users": [
@@ -119,67 +128,13 @@
     "INVENTORY_MANAGER",
     "BILLING_STAFF"
   ],
-  "carts": {
-    "1241907317": [
-      {
-        "barcode": "123456",
-        "name": "Nestlé Milo 500g",
-        "price": 2500,
-        "category": "Beverage",
-        "image": "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&q=80&w=200",
-        "description": "The energy food drink of future champions.",
-        "quantity": 1,
-        "scanTime": "2026-01-14T17:51:26.164Z"
-      },
-      {
-        "barcode": "6151100052476",
-        "name": "Hollandia Evaporated milk 190g",
-        "price": 750,
-        "category": "Dairy",
-        "description": "",
-        "createdAt": "2026-01-14T17:27:34.467Z",
-        "quantity": 7,
-        "scanTime": "2026-01-14T18:15:13.258Z"
-      },
-      {
-        "barcode": "6033000683113",
-        "name": "Nestle Milo sachet 20 g",
-        "price": 250,
-        "category": "Beverages ",
-        "description": "",
-        "createdAt": "2026-01-15T14:05:48.030Z",
-        "quantity": 11,
-        "scanTime": "2026-01-15T14:06:22.336Z"
-      },
-      {
-        "barcode": "691325634683",
-        "name": "Yana Premium water",
-        "price": 500,
-        "category": "Water",
-        "description": "",
-        "createdAt": "2026-01-15T15:40:09.237Z",
-        "quantity": 7,
-        "scanTime": "2026-01-15T15:40:36.823Z"
-      }
-    ],
-    "7272393909": [
-      {
-        "barcode": "6151100052476",
-        "name": "Hollandia Evaporated milk 190g",
-        "price": 750,
-        "category": "Dairy",
-        "description": "",
-        "createdAt": "2026-01-14T17:27:34.467Z",
-        "quantity": 1,
-        "scanTime": "2026-01-15T18:34:22.145Z"
-      }
-    ]
-  },
+  "carts": {},
   "settings": {
     "storeName": "Smart Priceless Shopper",
     "location": "Lagos, Nigeria",
     "operatingHours": "8:00 AM - 9:00 PM",
     "welcomeMessage": "Welcome to Smart Priceless Shopper! Ready to shop? 🛍️",
     "contactSupport": "@priceless_support"
-  }
+  },
+  "orders": []
 }

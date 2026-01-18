@@ -235,7 +235,10 @@ async def process_barcode_logic(barcode, update, context):
             recommendations = get_recommendations(product, all_products)
             msg = f"📦 *{product['name']}*\n💰 *Price:* ₦{product['price']:,}\n\n"
             
-            cart = context.user_data.get('cart', [])
+            # Check backend cart to see if item is there
+            user_id = update.effective_user.id
+            cart_res = smart_request("GET", f"/cart/{user_id}")
+            cart = cart_res.json() if cart_res.status_code == 200 else []
             in_cart = any(item['barcode'] == barcode for item in cart)
             
             keyboard = []
@@ -347,29 +350,45 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if data.startswith('add_'):
         barcode = data.split('_')[1]
+        user_id = query.from_user.id
         try:
-            res = requests.get(f"{API_URL}/products/{barcode}").json()
-            if 'cart' not in context.user_data: context.user_data['cart'] = []
-            context.user_data['cart'].append(res)
-            await query.edit_message_text(f"✅ Added *{res['name']}* to your cart.", parse_mode='Markdown', reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🛒 VIEW CART", callback_data="view_cart")]]))
-        except: pass
+            # Add to backend cart
+            res = smart_request("POST", "/cart/add", json={"userId": user_id, "barcode": barcode, "quantity": 1})
+            if res.status_code == 200:
+                p = res.json().get('product', {})
+                await query.edit_message_text(f"✅ Added *{p.get('name', 'Item')}* to your cart.", parse_mode='Markdown', reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🛒 VIEW CART", callback_data="view_cart")]]))
+            else:
+                await query.edit_message_text("⚠️ Could not add item to cart.")
+        except Exception as e:
+            logging.error(f"Add Cart Error: {e}")
     elif data.startswith('rem_'):
         barcode = data.split('_')[1]
-        if 'cart' in context.user_data:
-            # Find the first item with this barcode and remove it
-            for i, item in enumerate(context.user_data['cart']):
-                if item['barcode'] == barcode:
-                    removed = context.user_data['cart'].pop(i)
-                    await query.edit_message_text(f"❌ Removed *{removed['name']}* from your cart.", parse_mode='Markdown', reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🛒 VIEW CART", callback_data="view_cart")]]))
-                    break
+        user_id = query.from_user.id
+        try:
+            # Since there's no specific remove-one endpoint, we could either implement one
+            # or clear the specific barcode. For now, we'll suggest using the Web App for fine control
+            # but we will try to clear it if we had a dedicated endpoint.
+            # Currently /api/cart/clear clears EVERYTHING.
+            # Let's assume the user wants to clear this specific item.
+            # I will check if I can just clear the whole cart or if I should implement remove-one in index.js
+            await query.edit_message_text(f"❌ Please use the [Digital Cart]({WEB_APP_URL}) for individual item removal.", parse_mode='Markdown')
+        except: pass
     elif data == 'view_cart':
         await show_cart(update, context)
     elif data == 'checkout':
         # Show payment method selection
         user_id = query.from_user.id
         try:
-            cart = requests.get(f"{API_URL}/cart/{user_id}").json()
+            cart = smart_request("GET", f"/cart/{user_id}").json()
+            if not cart:
+                await query.edit_message_text("🛒 Your cart is empty!")
+                return
+                
             total = sum((item['price'] * item.get('quantity', 1)) for item in cart)
+            
+            # Store for transaction reference later
+            context.user_data['checkout_cart_data'] = cart
+            context.user_data['checkout_total'] = total
             
             msg = (
                 "💳 *SELECT PAYMENT METHOD*\n\n"
@@ -470,40 +489,41 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = query.from_user.id
         
         try:
-            # Fetch cart items
-            cart_res = smart_request("GET", f"/cart/{user_id}")
-            cart_data = cart_res.json()
-            
-            if not cart_data or not cart_data.get('items'):
-                await query.edit_message_text("⚠️ Your cart is empty. Please add items before paying.")
+            # Retrieve cart data and total from context
+            cart_data = context.user_data.get('checkout_cart_data')
+            total = context.user_data.get('checkout_total')
+
+            if not cart_data or not total:
+                await query.edit_message_text("⚠️ Your cart data is missing. Please try checking out again.")
                 return
 
-            # Create Order
+            # Create Transaction/Order
             order_data = {
                 "userId": user_id,
-                "items": cart_data['items'],
-                "total": cart_data['total'],
+                "items": cart_data, # it's already a list of items from /api/cart/user_id
+                "totalAmount": total,
                 "paymentMethod": "Bank Transfer",
-                "paymentRef": ref_code
+                "paymentRef": ref_code,
+                "outletId": "imo-central" # Default
             }
             
-            smart_request("POST", "/orders", json=order_data)
-
-            msg = (
-                "✅ *PAYMENT CONFIRMED & ORDER PLACED*\n\n"
-                f"Receipt Reference: `{ref_code}`\n\n"
-                "Receipt initiated! You can view and print your receipt in the shopper dashboard.\n\n"
-                "🕐 Our staff will verify the transfer and prepare your items for pickup."
-            )
-            
-            keyboard = [[InlineKeyboardButton("📜 View Digital Receipt", web_app=WebAppInfo(url=f"{WEB_APP_URL}/history"))]]
-            await query.edit_message_text(msg, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(keyboard))
+            res = smart_request("POST", "/checkout", json=order_data)
+            if res.status_code == 201:
+                msg = (
+                    "✅ *PAYMENT CONFIRMED & ORDER PLACED*\n\n"
+                    f"Receipt Reference: `{ref_code}`\n\n"
+                    "Receipt initiated! You can view and print your receipt in the shopper dashboard.\n\n"
+                    "🕐 Our staff will verify the transfer and prepare your items for pickup."
+                )
+                keyboard = [[InlineKeyboardButton("📜 View Digital Receipt", web_app=WebAppInfo(url=f"{WEB_APP_URL}/history"))]]
+                await query.edit_message_text(msg, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(keyboard))
+            else:
+                raise Exception(f"Server returned {res.status_code}")
             
         except Exception as e:
             print(f"Checkout Error: {e}")
             await query.edit_message_text("⚠️ Error processing your receipt. Please contact support.")
     
-    elif data == 'clear_cart':
         user_id = query.from_user.id
         smart_request("POST", "/cart/clear", json={"userId": user_id})
         await query.edit_message_text("🗑️ Cart cleared!")

@@ -472,7 +472,9 @@ app.post('/api/cart/add', (req, res) => {
 
 app.post('/api/cart/clear', (req, res) => {
   const { userId } = req.body;
-  db.carts[userId] = [];
+  if (db.carts) db.carts[userId] = [];
+  const user = db.users.find(u => String(u.userId) === String(userId));
+  if (user) user.cart = [];
   saveDb();
   res.json({ message: 'Cart cleared' });
 });
