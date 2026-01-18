@@ -43,8 +43,8 @@ log("Spawning Bot (Python)...");
 let bot;
 
 function spawnBot() {
-    // Try .venv first (Render/Nixpacks), then python3, then python
-    const cmds = ['./.venv/bin/python', 'python3', 'python'];
+    // Try venv paths first (Render/Docker/Nixpacks), then python3, then python
+    const cmds = ['/opt/venv/bin/python', './.venv/bin/python', 'python3', 'python'];
     let currentCmdIndex = 0;
 
     function trySpawn(index) {

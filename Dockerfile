@@ -1,7 +1,6 @@
-# Use Node.js 20 as the base image
 FROM node:20-slim
 
-# Install Python 3, pip, and system dependencies
+# Install Python 3
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
@@ -9,23 +8,33 @@ RUN apt-get update && apt-get install -y \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
 WORKDIR /app
 
-# Create virtual environment EARLY for caching
-RUN python3 -m venv .venv
-RUN .venv/bin/pip install --no-cache-dir requests python-telegram-bot python-dotenv
+# 1. Create venv and install python deps (cached)
+RUN python3 -m venv /opt/venv
+RUN /opt/venv/bin/pip install --no-cache-dir requests python-telegram-bot python-dotenv
 
-# Copy the entire project
+# 2. Install root dependencies (cached)
+COPY package*.json ./
+RUN npm install
+
+# 3. Install Backend dependencies (cached)
+COPY backend/package*.json ./backend/
+RUN cd backend && npm install
+
+# 4. Install Frontend dependencies and build (cached)
+COPY frontend/package*.json ./frontend/
+RUN cd frontend && npm install
+COPY frontend/ ./frontend/
+RUN cd frontend && npm run build
+
+# 5. Copy remaining source
 COPY . .
 
-# Install Node dependencies
-RUN npm install
-RUN cd backend && npm install
-RUN cd frontend && npm install && npm run build
+# Ensure PATH uses the venv
+ENV PATH="/opt/venv/bin:$PATH"
 
-# Expose the API port
 EXPOSE 5000
 
-# Start the unified service
+# Start unified service
 CMD ["npm", "start"]
