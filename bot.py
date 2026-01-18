@@ -20,7 +20,11 @@ load_dotenv()
 
 # --- Configuration ---
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8572310430:AAG_PxjRMAiAFWtLN0f7SfD4yEWD5l3qnas")
-API_BASE = os.getenv("API_BASE", "https://smart-priceless-shopper.onrender.com")
+
+# Default API_BASE to localhost for internal Render/Railway communication,
+# but fallback to the public URL for external/optional config.
+# WEB_APP_URL MUST be public for the Telegram client to open it.
+API_BASE = os.getenv("API_BASE", "http://localhost:5000")
 API_URL = f"{API_BASE}/api"
 WEB_APP_URL = os.getenv("WEB_APP_URL", "https://smart-priceless-shopper.onrender.com")
 SCANNER_URL = f"{WEB_APP_URL}/scanner.html"
@@ -37,15 +41,17 @@ logging.basicConfig(
 
 async def is_authenticated(user_id):
     try:
-        res = requests.get(f"{API_URL}/users/check/{user_id}").json()
+        res = requests.get(f"{API_URL}/users/check/{user_id}", timeout=10).json()
         return res.get('registered') and res.get('loggedIn')
-    except:
+    except Exception as e:
+        logging.error(f"Auth Check Error for {user_id}: {e}")
         return False
 
 async def get_user_status(user_id):
     try:
-        return requests.get(f"{API_URL}/users/check/{user_id}").json()
-    except:
+        return requests.get(f"{API_URL}/users/check/{user_id}", timeout=10).json()
+    except Exception as e:
+        logging.error(f"User Status Error for {user_id}: {e}")
         return {"registered": False}
 
 def get_recommendations(current_product, all_products):
@@ -57,6 +63,9 @@ def get_recommendations(current_product, all_products):
     return related[:3]
 
 # --- Registration Flow ---
+
+async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("🏓 Pong! Bot is alive and well.")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -143,7 +152,7 @@ async def handle_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     
     try:
-        res = requests.post(f"{API_URL}/users/login", json={"userId": user_id, "code": code})
+        res = requests.post(f"{API_URL}/users/login", json={"userId": user_id, "code": code}, timeout=10)
         if res.status_code == 200:
             data = res.json()
             await update.message.reply_text(
@@ -158,8 +167,9 @@ async def handle_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await update.message.reply_text("❌ *Invalid Code.* Please try again or check your records.", parse_mode='Markdown')
             return LOGIN_CODE
-    except:
-        await update.message.reply_text("Service error during login.")
+    except Exception as e:
+        logging.error(f"Login Error for {user_id}: {e}")
+        await update.message.reply_text("Service error during login. Please try again later.")
         return ConversationHandler.END
 
 # --- Feature Handlers (Auth Guarded) ---
@@ -628,6 +638,7 @@ if __name__ == '__main__':
         )
         
         application.add_handler(reg_handler)
+        application.add_handler(CommandHandler('ping', ping))
         application.add_handler(CommandHandler('admin', admin_menu))
         application.add_handler(CommandHandler('staff', staff_menu))
         application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
