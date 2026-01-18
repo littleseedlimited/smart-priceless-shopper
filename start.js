@@ -37,8 +37,18 @@ let bot;
 function spawnBot(cmd) {
     const p = spawn(cmd, ['bot.py'], {
         cwd: __dirname,
-        stdio: 'inherit',
+        stdio: ['ignore', 'pipe', 'pipe'],
         env: process.env
+    });
+
+    p.stdout.on('data', (data) => {
+        logStream.write(data);
+        process.stdout.write(data);
+    });
+
+    p.stderr.on('data', (data) => {
+        logStream.write(data);
+        process.stderr.write(data);
     });
 
     p.on('error', (err) => {
