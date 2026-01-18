@@ -1,9 +1,7 @@
 services:
   - type: web
     name: smart-priceless-shopper
-    env: nixpacks
-    plan: free
-    env: nixpacks
+    env: docker
     plan: free
     envVars:
       - key: PORT
