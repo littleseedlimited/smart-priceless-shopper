@@ -258,7 +258,7 @@
                     style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; font-size: 11px; padding: 5px 10px; border-radius: 8px; font-weight: 700; cursor: pointer;">CLEAR
                     CART</button>
             </div>
-            <div class="instruction" id="header-instruction">AI Vision & Barcode active</div>
+            <div class="instruction" id="header-instruction">Barcode Scanner Active</div>
         </div>
         <div class="scanner-viewfinder">
             <div class="frame">
@@ -291,25 +291,11 @@
             </div>
         </div>
 
-        <div id="multi-toast" class="feedback-toast" style="max-height: 400px; overflow-y: auto;">
-            <div class="toast-title">DETECTED PRODUCTS</div>
-            <p style="font-size: 11px; color: #666; margin-top: 0;">AI recognized these items</p>
-            <div id="multi-list" style="width: 100%; margin: 10px 0;"></div>
-            <button onclick="addAllToCart()" class="done-btn"
-                style="width: 100%; padding: 12px; font-size: 14px; border-radius: 12px;">ADD ALL TO CART</button>
-            <button onclick="cancelMulti()"
-                style="margin-top: 10px; background: none; border: none; font-size: 12px; color: #666; cursor: pointer; font-weight: 700;">DISMISS</button>
-        </div>
 
         <div class="footer">
-            <div id="status" class="status-text">INITIALIZING AI VISION...</div>
+            <div id="status" class="status-text">INITIALIZING SCANNER...</div>
             <div style="display: flex; gap: 12px; width: 100%; max-width: 400px;">
-                <button class="done-btn"
-                    style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); flex: 1; box-shadow: none;"
-                    onclick="runAIVision(true)">
-                    AI SNAPSHOT
-                </button>
-                <button class="done-btn" style="flex: 1.5;" onclick="finishShopping()">DONE SHOPPING</button>
+                <button class="done-btn" style="flex: 1;" onclick="finishShopping()">DONE SHOPPING</button>
             </div>
         </div>
     </div>
@@ -462,7 +448,7 @@
             if (!scanCount[decodedText]) {
                 scanCount = {}; // Reset others
                 scanCount[decodedText] = 1;
-                document.getElementById('status').innerText = `CALIBRATING AI... (${scanCount[decodedText]}/${SCAN_THRESHOLD})`;
+                document.getElementById('status').innerText = `SCANNING... (${scanCount[decodedText]}/${SCAN_THRESHOLD})`;
                 return;
             } else {
                 scanCount[decodedText]++;
@@ -497,137 +483,6 @@
                 });
         }
 
-        // --- AI VISION ADDITION ---
-        let currentMultiProducts = [];
-        let aiInterval = null;
-
-        /**
-         * runAIVision identifies products from the video stream
-         * @param {boolean} isManual - If true, shows error/feedback more aggressively
-         */
-        function runAIVision(isManual = false) {
-            // If already processing or manual/paused conflict, skip
-            if (isProcessing || scannerPaused) return;
-
-            if (isManual) {
-                document.getElementById('status').innerText = "AI VISION ANALYSIS...";
-            }
-
-            const video = document.querySelector('video');
-            if (!video) return;
-
-            const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 800; // Higher resolution for better recognition
-            const scale = MAX_WIDTH / video.videoWidth;
-            canvas.width = MAX_WIDTH;
-            canvas.height = video.videoHeight * scale;
-
-            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-            const imageData = canvas.toDataURL('image/jpeg', 0.7); // 70% quality for clarity
-
-            fetch('/api/vision/identify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image: imageData, userId: userId })
-            })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.products && data.products.length > 0) {
-                        showMultiResults(data.products);
-                    } else if (data.product) {
-                        showToast(data.product);
-                    } else if (isManual) {
-                        document.getElementById('status').innerText = "AI: NO PRODUCT RECOGNIZED";
-                        setTimeout(() => { if (!isProcessing) document.getElementById('status').innerText = "READY"; }, 2000);
-                    }
-                })
-                .catch(err => {
-                    if (isManual) {
-                        console.error(err);
-                        document.getElementById('status').innerText = "AI VISION ERROR";
-                        setTimeout(() => { if (!isProcessing) document.getElementById('status').innerText = "READY"; }, 2000);
-                    }
-                });
-        }
-
-        // AUTO-AI: Integrated in the main scanner
-        function startPassiveAI() {
-            if (aiInterval) clearInterval(aiInterval);
-
-            // Background scanning
-            aiInterval = setInterval(() => {
-                if (!isProcessing && !scannerPaused) {
-                    runAIVision(false);
-                }
-            }, 6000);
-
-            // Dynamic status feedback
-            setInterval(() => {
-                if (!isProcessing && !scannerPaused) {
-                    const statusEl = document.getElementById('status');
-                    if (statusEl.innerText.includes("BARCODE")) {
-                        statusEl.innerText = "✨ AI VISION ACTIVE...";
-                        statusEl.style.borderColor = "var(--brand-blue)";
-                    } else {
-                        statusEl.innerText = "🔍 SCANNING BARCODE...";
-                        statusEl.style.borderColor = "rgba(245, 130, 32, 0.3)";
-                    }
-                }
-            }, 3000);
-        }
-
-        function showMultiResults(products) {
-            isProcessing = true;
-            currentMultiProducts = products;
-            const list = document.getElementById('multi-list');
-            list.innerHTML = products.map(p => `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; background: white; margin-bottom: 5px; border-radius: 8px;">
-                    <div style="text-align: left;">
-                        <div style="font-weight: 800; font-size: 14px; color: #333; line-height: 1.2;">${p.name}</div>
-                        <div style="font-size: 13px; color: var(--brand-red); font-weight: 700; margin-top: 2px;">₦${p.price.toLocaleString()}</div>
-                    </div>
-                </div>
-            `).join('');
-
-            document.getElementById('multi-toast').style.display = 'flex';
-            document.getElementById('status').innerText = "AI DETECTED ITEMS";
-
-            // Beep sound
-            try { new Audio('https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3').play(); } catch (e) { }
-
-            html5QrCode.pause();
-            scannerPaused = true;
-        }
-
-        function addAllToCart() {
-            if (currentMultiProducts.length === 0) return;
-            document.getElementById('status').innerText = `ADDING ${currentMultiProducts.length} ITEMS...`;
-
-            // Sequential add to keep it simple and avoid race conditions on db.json
-            const addNext = (index) => {
-                if (index >= currentMultiProducts.length) {
-                    document.getElementById('multi-toast').style.display = 'none';
-                    document.getElementById('status').innerHTML = `<span style="color: var(--brand-green)">✨ ALL ITEMS ADDED!</span>`;
-                    setTimeout(resumeScanner, 2000);
-                    return;
-                }
-
-                const p = currentMultiProducts[index];
-                fetch('/api/cart/add', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId, barcode: p.barcode, quantity: 1 })
-                }).then(() => addNext(index + 1));
-            };
-
-            addNext(0);
-        }
-
-        function cancelMulti() {
-            document.getElementById('multi-toast').style.display = 'none';
-            document.getElementById('status').innerText = "READY";
-            resumeScanner();
-        }
 
         function finishShopping() {
             tg.sendData("VIEW_CART");
@@ -673,7 +528,6 @@
                 html5QrCode.start(backCamera.id, config, onScanSuccess)
                     .then(() => {
                         document.getElementById('status').innerText = "ALIGN BARCODE TO SCAN";
-                        startPassiveAI();
                     })
                     .catch(err => {
                         console.error("Camera start error:", err);

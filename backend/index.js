@@ -136,7 +136,7 @@ app.get('/api/products/:barcode', (req, res) => {
 });
 
 // Admin CRUD - Products
-app.post('/api/admin/products', checkRole(['SUPER_ADMIN', 'INVENTORY_MANAGER']), (req, res) => {
+app.post('/api/admin/products', (req, res) => {
   const { barcode, name, price, category, description } = req.body;
   const bcode = String(barcode).trim();
   const existing = db.products.find(p => String(p.barcode).trim() === bcode);
@@ -148,7 +148,7 @@ app.post('/api/admin/products', checkRole(['SUPER_ADMIN', 'INVENTORY_MANAGER']),
     price: parseInt(price) || 0,
     category,
     description,
-    images: req.body.images || (req.body.image ? [req.body.image] : []), // Support array of images
+    images: req.body.images || (req.body.image ? [req.body.image] : []),
     createdAt: new Date()
   };
   db.products.push(product);
@@ -157,13 +157,13 @@ app.post('/api/admin/products', checkRole(['SUPER_ADMIN', 'INVENTORY_MANAGER']),
 });
 
 // Admin endpoint to upload/update product image
-app.post('/api/admin/products/:barcode/image', checkRole(['SUPER_ADMIN', 'INVENTORY_MANAGER']), (req, res) => {
+app.post('/api/admin/products/:barcode/image', (req, res) => {
   const barcode = String(req.params.barcode).trim();
   const index = db.products.findIndex(p => String(p.barcode).trim() === barcode);
 
   if (index !== -1) {
     if (!db.products[index].images) db.products[index].images = [];
-    db.products[index].images.push(req.body.image); // Add to array
+    db.products[index].images.push(req.body.image);
     saveDb();
     res.json({ message: 'Image added successfully', barcode, count: db.products[index].images.length });
   } else {
@@ -171,110 +171,8 @@ app.post('/api/admin/products/:barcode/image', checkRole(['SUPER_ADMIN', 'INVENT
   }
 });
 
-// AI Vision Identification Endpoint
-app.post('/api/vision/identify', async (req, res) => {
-  const { image } = req.body;
-  if (!image) return res.status(400).json({ error: 'No image provided' });
 
-  // 🤖 REAL AI INTEGRATION (Gemini Vision)
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-
-  if (GEMINI_API_KEY) {
-    try {
-      const base64Data = image.split(',')[1];
-      const inventoryNames = db.products.map(p => p.name).join(', ');
-
-      const prompt = `Identify products in this image. We have these in inventory: [${inventoryNames}]. 
-      Only return product names from this list that you ARE SURE you see. 
-      Return only the names, comma separated. If none found, return "None".`;
-
-      const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: prompt },
-              { inline_data: { mime_type: "image/jpeg", data: base64Data } }
-            ]
-          }]
-        })
-      });
-
-      const data = await aiResponse.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-
-      console.log(`[AI Vision] Gemini identified: ${text}`);
-
-      if (!text || text.toLowerCase().includes("none")) {
-        return res.json({ products: [] });
-      }
-
-      // Match found text against our database
-      const detected = db.products.filter(p =>
-        text.toLowerCase().includes(p.name.toLowerCase())
-      );
-
-      return res.json({ products: detected });
-    } catch (err) {
-      console.error("[AI Vision] Gemini Error:", err);
-    }
-  }
-
-  // 🧪 FALLBACK SIMULATION (If no key or error)
-  // Smart simulation: returns 1-2 items that actually have visual fingerprints
-  const candidates = db.products.filter(p => (p.images && p.images.length > 0) || p.image);
-  const matches = candidates.sort(() => 0.5 - Math.random()).slice(0, 1);
-  res.json({ products: matches });
-});
-
-// 🔍 AI DISCOVERY (For Inventory Auto-fill)
-app.post('/api/vision/explore', async (req, res) => {
-  const { image } = req.body;
-  if (!image) return res.status(400).json({ error: 'No image provided' });
-
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-  if (!GEMINI_API_KEY) return res.status(503).json({ error: 'AI Service Not Configured' });
-
-  try {
-    const base64Data = image.split(',')[1];
-    const prompt = `Act as a retail expert. Look at this product image. 
-    1. Extract the barcode if clearly visible.
-    2. Identify the full product name.
-    3. Categorize it (e.g., Dairy, Beverage, Household, etc.).
-    4. Provide a brief description.
-    
-    Return the result strictly as a JSON object:
-    {"barcode": "string", "name": "string", "category": "string", "description": "string"}`;
-
-    const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: prompt },
-            { inline_data: { mime_type: "image/jpeg", data: base64Data } }
-          ]
-        }]
-      })
-    });
-
-    const data = await aiResponse.json();
-    let text = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-
-    // Clean JSON markdown if present
-    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    const result = JSON.parse(text);
-
-    res.json(result);
-  } catch (err) {
-    console.error("[AI Explore] Error:", err);
-    res.status(500).json({ error: 'AI recognition failed' });
-  }
-});
-
-app.post('/api/admin/products/bulk', checkRole(['SUPER_ADMIN', 'INVENTORY_MANAGER']), (req, res) => {
+app.post('/api/admin/products/bulk', (req, res) => {
   const products = req.body;
   if (!Array.isArray(products)) return res.status(400).json({ error: 'Expected array of products' });
 
@@ -298,7 +196,7 @@ app.post('/api/admin/products/bulk', checkRole(['SUPER_ADMIN', 'INVENTORY_MANAGE
   res.json({ message: 'Bulk upload successful', added, updated });
 });
 
-app.put('/api/admin/products/:barcode', checkRole(['SUPER_ADMIN', 'INVENTORY_MANAGER']), (req, res) => {
+app.put('/api/admin/products/:barcode', (req, res) => {
   const oldBarcode = String(req.params.barcode).trim();
   const index = db.products.findIndex(p => String(p.barcode).trim() === oldBarcode);
 

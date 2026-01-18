@@ -13,7 +13,6 @@ const AdminInventory = ({ adminUsername }) => {
     const [uploading, setUploading] = useState(false);
     const [showScanner, setShowScanner] = useState(false);
     const [showAddMenu, setShowAddMenu] = useState(false);
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
     const scannerRef = useRef(null);
     const fileInputRef = useRef(null);
     const html5QrCodeRef = useRef(null);
@@ -327,30 +326,6 @@ const AdminInventory = ({ adminUsername }) => {
     const processImageData = (imageData) => {
         if (isAdding) {
             setEditForm(prev => ({ ...prev, images: [...(prev.images || []), imageData] }));
-            setIsAnalyzing(true);
-
-            fetch(`${API_BASE}/vision/explore`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image: imageData })
-            })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.name) {
-                        setEditForm(prev => ({
-                            ...prev,
-                            barcode: prev.barcode || data.barcode || '',
-                            name: data.name || prev.name,
-                            category: data.category || prev.category,
-                            description: data.description || prev.description
-                        }));
-                    }
-                    setIsAnalyzing(false);
-                })
-                .catch(err => {
-                    console.error("AI Explore Error:", err);
-                    setIsAnalyzing(false);
-                });
         } else {
             setEditForm(prev => ({ ...prev, newImage: imageData }));
         }
@@ -496,11 +471,6 @@ const AdminInventory = ({ adminUsername }) => {
                                     <td style={{ padding: '16px 20px' }}>
                                         <div onClick={handleCameraIconClick} style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#333', overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                                             <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={handleImageUpload} />
-                                            {isAnalyzing && (
-                                                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                    <div className="spinner-small"></div>
-                                                </div>
-                                            )}
                                             {editForm.images && editForm.images.length > 0 ? (
                                                 <img src={editForm.images[editForm.images.length - 1]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                             ) : editForm.image ? (
