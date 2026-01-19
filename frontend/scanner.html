@@ -31,6 +31,15 @@
             width: 100%;
             height: 100%;
             background: #000;
+            min-height: 400px;
+            /* Ensure visual area exists */
+        }
+
+        #reader video {
+            object-fit: cover !important;
+            /* Make sure video fills the reader */
+            width: 100% !important;
+            height: 100% !important;
         }
 
         .overlay {
@@ -495,6 +504,7 @@
         const config = {
             fps: 24,
             qrbox: { width: 280, height: 180 },
+            aspectRatio: 1.0,
             formatsToSupport: [
                 Html5QrcodeSupportedFormats.EAN_13,
                 Html5QrcodeSupportedFormats.EAN_8,
@@ -507,25 +517,56 @@
             ]
         };
 
-        Html5Qrcode.getCameras().then(cameras => {
-            if (cameras && cameras.length > 0) {
-                // Prefer back camera
-                const backCamera = cameras.find(c => c.label.toLowerCase().includes('back')) || cameras[cameras.length - 1];
-                html5QrCode.start(backCamera.id, config, onScanSuccess)
+        function startScanner() {
+            Html5Qrcode.getCameras().then(cameras => {
+                console.log("[Scanner] Found cameras:", cameras);
+                if (cameras && cameras.length > 0) {
+                    // Filter for back cameras or pick the last one (usually back)
+                    let backCamera = cameras.find(c =>
+                        c.label.toLowerCase().includes('back') ||
+                        c.label.toLowerCase().includes('rear') ||
+                        c.label.toLowerCase().includes('environment')
+                    );
+
+                    const camId = backCamera ? backCamera.id : cameras[cameras.length - 1].id;
+                    console.log("[Scanner] Starting camera ID:", camId);
+
+                    html5QrCode.start({ deviceId: { exact: camId } }, config, onScanSuccess)
+                        .then(() => {
+                            console.log("[Scanner] Camera started successfully");
+                            document.getElementById('status').innerText = "ALIGN BARCODE TO SCAN";
+                        })
+                        .catch(err => {
+                            console.error("[Scanner] html5QrCode.start error:", err);
+                            // Fallback if exact device ID fails
+                            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+                                .then(() => {
+                                    document.getElementById('status').innerText = "ALIGN BARCODE TO SCAN";
+                                })
+                                .catch(err2 => {
+                                    document.getElementById('status').innerText = "ERROR: TAP TO RETRY";
+                                    console.error("[Scanner] FacingMode fallback error:", err2);
+                                });
+                        });
+                } else {
+                    document.getElementById('status').innerText = "NO CAMERA DETECTED";
+                }
+            }).catch(err => {
+                console.error("[Scanner] getCameras error:", err);
+                // Attempt direct start as last resort
+                html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
                     .then(() => {
                         document.getElementById('status').innerText = "ALIGN BARCODE TO SCAN";
                     })
-                    .catch(err => {
-                        console.error("Camera start error:", err);
-                        document.getElementById('status').innerText = "CAMERA ERROR - TAP TO RETRY";
+                    .catch(finalErr => {
+                        document.getElementById('status').innerText = "CAMERA PERMISSION DENIED";
+                        console.error("[Scanner] Final direct start error:", finalErr);
                     });
-            } else {
-                document.getElementById('status').innerText = "NO CAMERA DETECTED";
-            }
-        }).catch(err => {
-            console.error("Camera access error:", err);
-            document.getElementById('status').innerText = "CAMERA PERMISSION DENIED";
-        });
+            });
+        }
+
+        // Initialize
+        startScanner();
     </script>
 </body>
 
