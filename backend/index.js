@@ -180,14 +180,28 @@ app.post('/api/admin/products/bulk', (req, res) => {
   let updated = 0;
 
   products.forEach(p => {
-    if (!p.barcode || !p.name || !p.price) return;
-    const barcode = String(p.barcode).trim();
+    const barcode = String(p.barcode || '').trim();
+    if (!barcode || !p.name) return; // Skip invalid entries, but allow price 0
+
+    const price = parseInt(p.price) || 0;
     const index = db.products.findIndex(existing => String(existing.barcode).trim() === barcode);
+
     if (index !== -1) {
-      db.products[index] = { ...db.products[index], ...p, barcode };
+      db.products[index] = {
+        ...db.products[index],
+        ...p,
+        barcode,
+        price,
+        updatedAt: new Date()
+      };
       updated++;
     } else {
-      db.products.push({ ...p, barcode });
+      db.products.push({
+        ...p,
+        barcode,
+        price,
+        createdAt: new Date()
+      });
       added++;
     }
   });
@@ -527,6 +541,8 @@ app.post('/api/checkout', (req, res) => {
     status: 'COMPLETED',
     createdAt: new Date()
   };
+
+  if (!db.orders) db.orders = [];
   db.orders.push(order);
 
   // 3. Create Transaction (for Analytics)

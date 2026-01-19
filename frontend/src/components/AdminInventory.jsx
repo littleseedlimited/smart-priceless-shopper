@@ -131,32 +131,47 @@ const AdminInventory = ({ adminUsername }) => {
 
         setUploading(true);
         const reader = new FileReader();
+
         reader.onload = async (evt) => {
             try {
-                const bstr = evt.target.result;
-                const wb = XLSX.read(bstr, { type: 'binary' });
-                const wsname = wb.SheetNames[0];
-                const ws = wb.Sheets[wsname];
-                const data = XLSX.utils.sheet_to_json(ws);
+                let mappedData = [];
+                const fileName = file.name.toLowerCase();
 
-                // Map common column names
-                const mappedData = data.map(row => {
-                    const barcode = String(row.barcode || row.Barcode || row.BARCODE || '').trim();
-                    return {
-                        barcode: barcode,
-                        name: (row.name || row.Name || row.NAME || '').trim(),
-                        price: parseInt(row.price || row.Price || row.PRICE || 0),
-                        category: (row.category || row.Category || 'Other').trim(),
-                        description: (row.description || row.Description || '').trim()
-                    };
-                }).filter(p => p.barcode && p.name);
+                if (fileName.endsWith('.json')) {
+                    const jsonData = JSON.parse(evt.target.result);
+                    mappedData = (Array.isArray(jsonData) ? jsonData : [jsonData]).map(p => ({
+                        barcode: String(p.barcode || p.Barcode || '').trim(),
+                        name: (p.name || p.Name || '').trim(),
+                        price: parseInt(p.price || p.Price || 0),
+                        category: (p.category || p.Category || 'Other').trim(),
+                        description: (p.description || p.Description || '').trim()
+                    }));
+                } else {
+                    const bstr = evt.target.result;
+                    const wb = XLSX.read(bstr, { type: 'binary' });
+                    const wsname = wb.SheetNames[0];
+                    const ws = wb.Sheets[wsname];
+                    const data = XLSX.utils.sheet_to_json(ws);
 
-                if (mappedData.length === 0) throw new Error("No valid products found in file");
+                    mappedData = data.map(row => {
+                        const barcode = String(row.barcode || row.Barcode || row.BARCODE || row['Bar Code'] || '').trim();
+                        return {
+                            barcode: barcode,
+                            name: (row.name || row.Name || row.NAME || row['Product Name'] || row.Item || '').trim(),
+                            price: parseInt(row.price || row.Price || row.PRICE || row.Amount || row.Cost || 0),
+                            category: (row.category || row.Category || row.CATEGORY || row.Dept || row.Department || 'Other').trim(),
+                            description: (row.description || row.Description || row.DESCRIPTION || row.Info || row.Notes || '').trim()
+                        };
+                    });
+                }
+
+                const finalData = mappedData.filter(p => p.barcode && p.name);
+                if (finalData.length === 0) throw new Error("No valid products found in file. Ensure Barcode and Name are present.");
 
                 const res = await fetch(`${API_BASE}/admin/products/bulk`, {
                     method: 'POST',
                     headers,
-                    body: JSON.stringify(mappedData)
+                    body: JSON.stringify(finalData)
                 });
 
                 if (res.ok) {
@@ -168,12 +183,19 @@ const AdminInventory = ({ adminUsername }) => {
                     alert(err.error || "Upload failed");
                 }
             } catch (err) {
+                console.error("Upload Error:", err);
                 alert("Error: " + err.message);
             } finally {
                 setUploading(false);
+                if (e.target) e.target.value = ''; // Reset input
             }
         };
-        reader.readAsBinaryString(file);
+
+        if (file.name.toLowerCase().endsWith('.json')) {
+            reader.readAsText(file);
+        } else {
+            reader.readAsBinaryString(file);
+        }
     };
 
     const handleEdit = (product) => {
@@ -397,7 +419,7 @@ const AdminInventory = ({ adminUsername }) => {
                             </div>
                             <label className="menu-item" style={{ padding: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', borderRadius: '8px', margin: 0 }}>
                                 <Upload size={18} color="var(--success)" /> {uploading ? 'Processing...' : 'Upload File'}
-                                <input type="file" hidden accept=".csv, .xlsx, .xls" onChange={(e) => { handleFileUpload(e); setShowAddMenu(false); }} disabled={uploading} />
+                                <input type="file" hidden accept=".csv, .xlsx, .xls, .json" onChange={(e) => { handleFileUpload(e); setShowAddMenu(false); }} disabled={uploading} />
                             </label>
                         </div>
                     )}

@@ -1,0 +1,74 @@
+[
+    {
+        "barcode": "123456",
+        "name": "Nestlé Milo 500g",
+        "price": 2500,
+        "category": "Beverage",
+        "image": "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&q=80&w=200",
+        "description": "The energy food drink of future champions."
+    },
+    {
+        "barcode": "234567",
+        "name": "Peak Full Cream Milk",
+        "price": 1800,
+        "category": "Dairy",
+        "image": "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&q=80&w=200",
+        "description": "Rich and creamy milk for your morning tea."
+    },
+    {
+        "barcode": "615600098593",
+        "name": "Lasena 1Litre",
+        "price": 250,
+        "category": "Water",
+        "description": ""
+    },
+    {
+        "barcode": "6151100052476",
+        "name": "Hollandia Evaporated milk 190g",
+        "price": 750,
+        "category": "Dairy",
+        "description": "",
+        "createdAt": "2026-01-14T17:27:34.467Z"
+    },
+    {
+        "barcode": "440850696938",
+        "name": "Fanta",
+        "price": 500,
+        "category": "Beverages",
+        "description": "",
+        "createdAt": "2026-01-14T19:00:03.682Z"
+    },
+    {
+        "barcode": "6033000683113",
+        "name": "Nestle Milo sachet 20 g",
+        "price": 250,
+        "category": "Beverages ",
+        "description": "",
+        "createdAt": "2026-01-15T14:05:48.030Z"
+    },
+    {
+        "barcode": "691325634683",
+        "name": "Yana Premium water",
+        "price": 500,
+        "category": "Water",
+        "description": "",
+        "createdAt": "2026-01-15T15:40:09.237Z"
+    },
+    {
+        "barcode": "714084851204",
+        "name": "Checkers custard",
+        "price": 3000,
+        "category": "Provision ",
+        "description": "",
+        "createdAt": "2026-01-15T18:24:49.565Z"
+    },
+    {
+        "barcode": "4005900736109",
+        "name": "Nivea Men Anti-perspirant Anti-transpirant 200ml",
+        "price": 3500,
+        "category": "Cosmetics",
+        "description": "Black and White invinsible",
+        "images": [],
+        "createdAt": "2026-01-18T23:02:15.134Z"
+    }
+]
