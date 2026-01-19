@@ -36,7 +36,6 @@
         }
 
         #reader video {
-            object-fit: cover !important;
             /* Make sure video fills the reader */
             width: 100% !important;
             height: 100% !important;
@@ -456,7 +455,7 @@
             isProcessing = true;
             scanCount = {}; // Reset for next scan
 
-            document.getElementById('status').innerText = "SEARCHING DATABASE...";
+            document.getElementById('status').innerText = `SEARCHING: ${decodedText}...`;
             fetch(`/api/products/${decodedText}`)
                 .then(res => {
                     if (res.status === 404) throw new Error("NOT_FOUND");
@@ -504,7 +503,6 @@
         const config = {
             fps: 24,
             qrbox: { width: 280, height: 180 },
-            aspectRatio: 1.0,
             formatsToSupport: [
                 Html5QrcodeSupportedFormats.EAN_13,
                 Html5QrcodeSupportedFormats.EAN_8,
