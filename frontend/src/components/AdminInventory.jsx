@@ -166,8 +166,14 @@ const AdminInventory = ({ adminUsername }) => {
                 }
 
                 const finalData = mappedData.filter(p => p.barcode && p.name);
-                if (finalData.length === 0) throw new Error("No valid products found in file. Ensure Barcode and Name are present.");
+                console.log("[BulkUpload] Final mapped data (first 3):", finalData.slice(0, 3));
 
+                if (finalData.length === 0) {
+                    console.warn("[BulkUpload] No valid products mapped from data:", mappedData.slice(0, 3));
+                    throw new Error("No valid products found in file. Ensure Barcode and Name are present.");
+                }
+
+                console.log("[BulkUpload] Sending POST to /api/admin/products/bulk...");
                 const res = await fetch(`${API_BASE}/admin/products/bulk`, {
                     method: 'POST',
                     headers,
@@ -176,10 +182,12 @@ const AdminInventory = ({ adminUsername }) => {
 
                 if (res.ok) {
                     const result = await res.json();
+                    console.log("[BulkUpload] Success from server:", result);
                     alert(`Success: Added ${result.added}, Updated ${result.updated}`);
                     fetchProducts();
                 } else {
                     const err = await res.json();
+                    console.error("[BulkUpload] Server error:", err);
                     alert(err.error || "Upload failed");
                 }
             } catch (err) {

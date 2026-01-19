@@ -174,14 +174,22 @@ app.post('/api/admin/products/:barcode/image', (req, res) => {
 
 app.post('/api/admin/products/bulk', (req, res) => {
   const products = req.body;
-  if (!Array.isArray(products)) return res.status(400).json({ error: 'Expected array of products' });
+  console.log(`[BulkUpload] Received ${Array.isArray(products) ? products.length : 'non-array'} products`);
+
+  if (!Array.isArray(products)) {
+    console.error("[BulkUpload] Expected array, got:", typeof products);
+    return res.status(400).json({ error: 'Expected array of products' });
+  }
 
   let added = 0;
   let updated = 0;
 
-  products.forEach(p => {
+  products.forEach((p, idx) => {
     const barcode = String(p.barcode || '').trim();
-    if (!barcode || !p.name) return; // Skip invalid entries, but allow price 0
+    if (!barcode || !p.name) {
+      if (idx < 5) console.warn(`[BulkUpload] Skipping item ${idx} due to missing barcode or name`, p);
+      return;
+    }
 
     const price = parseInt(p.price) || 0;
     const index = db.products.findIndex(existing => String(existing.barcode).trim() === barcode);
@@ -206,6 +214,7 @@ app.post('/api/admin/products/bulk', (req, res) => {
     }
   });
 
+  console.log(`[BulkUpload] Processed: ${added} added, ${updated} updated. Total DB size: ${db.products.length}`);
   saveDb();
   res.json({ message: 'Bulk upload successful', added, updated });
 });
